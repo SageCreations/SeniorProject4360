@@ -4,6 +4,12 @@ let bot_history = []
 // TODO: probably need to convert this to a onclick="" call in the html and make a async function to
 //       send all the images to the backend for the OCR stuff to take over.
 // TODO: look into encoding the images and pdf's into base64 to send to the backend as a string
+// https://webui.me/docs/2.5/#/?id=javascript-decode
+// could be encode or decode, not sure yet...
+// const str = webui.decode(base64); // this is the line we need, base64 being the image encoded to base64 already
+// Then call this in the python backend:
+// decoded_string = webui.ui_decode("SGVsbG8=")
+// print(f"Decoded String: {decoded_string}")  # Output: Hello
 
 // Trigger file input when docBtn is clicked
 document.getElementById('docBtn').addEventListener('click', function() {
