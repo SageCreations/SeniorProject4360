@@ -1,5 +1,6 @@
-let user_history = []
-let bot_history = []
+let user_history = [];
+let bot_history = [];
+let file_list = [];
 
 // TODO: probably need to convert this to a onclick="" call in the html and make a async function to
 //       send all the images to the backend for the OCR stuff to take over.
@@ -26,16 +27,24 @@ document.getElementById('fileInput').addEventListener('change', function(e) {
         Array.from(files).forEach(file => {
             const fileItem = document.createElement('div');
 
+            // add file to file_list for sending to the backend later
+            const reader = new FileReader();
+            reader.onload = function () {
+                const dataURL = reader.result; 
+                file_list.push(dataURL);
+            };
+            reader.readAsDataURL(file);
+
             // Check file type and display appropriate preview
             if (file.type.startsWith('image/')) {
-                const reader = new FileReader();
-                reader.onload = function(event) {
+                const preview_reader = new FileReader();
+                preview_reader.onload = function(event) {
                     const img = document.createElement('img');
                     img.src = event.target.result;
                     img.classList.add('preview-img');
                     fileItem.appendChild(img);
                 };
-                reader.readAsDataURL(file);
+                preview_reader.readAsDataURL(file);
             } else if (file.type === 'application/pdf') {
                 // Create a PDF icon using inline SVG inside a styled container
                 const pdfContainer = document.createElement('div');
@@ -63,6 +72,7 @@ async function handleQuery() {
     // Get the file input element and its files
     const fileInput = document.getElementById('fileInput');
     const files = fileInput.files; // This is a FileList object
+    console.log(file_list);
 
     addUserMessage(query, files);
     user_history.push(query);
@@ -86,16 +96,18 @@ async function handleQuery() {
     // Add a bot placeholder message
     const placeholder = addBotPlaceholderMessage();
 
-    webui.handleChat(user_history.join('|'), bot_history.join('|')).then(resp => {
+    webui.handleChat(user_history.join('|'), bot_history.join('|'), file_list.join('|')).then(resp => {
         bot_history.push(resp);
         placeholder.remove();
         addBotMessage(resp);
         submit_btn.disabled = false;
+        file_list = [];
     }).catch(error => {
         console.error(error);
         // Handle error as needed
         placeholder.remove()
         submit_btn.disabled = false;
+        file_list = [];
     });
 }
 

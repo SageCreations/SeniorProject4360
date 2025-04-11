@@ -3,7 +3,7 @@ import cohere
 
 co = cohere.ClientV2(api_key="baEFHZHrRfmJQFaKNwCRIUpQODvAi5OW272d2God")
 
-def handle_text(user_history: list[str], bot_history: list[str]) -> str:
+def handle_text(user_history: list[str], bot_history: list[str], docs: list[str]) -> str:
     # Define a system message
     system_message = ""
 
@@ -27,19 +27,35 @@ def handle_text(user_history: list[str], bot_history: list[str]) -> str:
     res = co.chat(
         model="command-r-plus-08-2024",
         messages=messages,
+        documents=docs,
     )
 
     return res.message.content[0].text
 
 
+def convert_files_to_string(file_list: list) -> list[str]:
+    for file in file_list:
+        metadata, base64_data = file.split(",")
+
+        file_type = metadata.split(";")[0].split(":")[1]
+        print(file_type)
+        
+    # TODO: use Boyce's function here to return the list[str] his function returns
+    return [] 
+
+
 def handle_chat(e: ui.Event):
     user_str = e.get_string_at(0)
     bot_str = e.get_string_at(1)
+    user_files_str = e.get_string_at(2)
 
     user_history: list = user_str.split("|")
     bot_history: list = bot_str.split("|")
+    file_list: list = user_files_str.split("|")
 
-    e.return_string(handle_text(user_history, bot_history))
+    doc_list: list[str] = convert_files_to_string(file_list)
+
+    e.return_string(handle_text(user_history, bot_history, doc_list))
 
 
 def main():
