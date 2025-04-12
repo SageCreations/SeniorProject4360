@@ -205,7 +205,10 @@ def main():
     #     print(f"'db' does not exist.")
     
     my_window = ui.Window()
+    
+    # TODO: switch these out when building an executable
     my_window.set_root_folder("views")
+    # my_window.set_root_folder("_internal/views")
 
     my_window.bind("handleChat", handle_chat)
     my_window.bind("getChats", get_histories)

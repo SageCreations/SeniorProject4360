@@ -177,3 +177,7 @@ cython_debug/
 
 # IDE related files
 .idea
+
+# Builds
+dist/*
+build/*
