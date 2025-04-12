@@ -1,6 +1,6 @@
 /* Set a fixed height for the chat area and enable scrolling */
 .chat-box {
-    height: 89vh;
+    height: 85vh;
     overflow-y: auto;
     background-color: #f8f9fa;
     padding: 15px;
@@ -8,6 +8,27 @@
 }
 .message {
   margin-bottom: 15px;
+}
+
+/* Lock scroll on the whole page */
+body {
+  height: 100vh;
+  margin: 10;
+  overflow: hidden;
+}
+/* Main chat container occupies full window and centers the chat area */
+.chat-container {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 100%;
+  max-width: 900px; /* adjust as needed */
+}
+/* Optionally style the header */
+.chat-title {
+  text-align: center;
+  margin-bottom: 10px;
 }
 
 /* Ensure the card-footer can show the slide-out preview */

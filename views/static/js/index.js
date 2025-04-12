@@ -1,6 +1,31 @@
-let user_history = [];
-let bot_history = [];
 let file_list = [];
+let current_hist = -1; // -1 by default, backend will create new history if -1.
+
+document.addEventListener('DOMContentLoaded', function() {
+    // DOM is loaded. Check if `webui` object is available
+    if (typeof webui !== 'undefined') {
+        // Set events callback
+        webui.setEventCallback((e) => {
+            if (e == webui.event.CONNECTED) {
+                // Connection to the backend is established
+                console.log('Connected.');
+                current_hist = -1;
+                initSidebar();
+
+
+            } else if (e == webui.event.DISCONNECTED) {
+                // Connection to the backend is lost
+                console.log('Disconnected.');
+
+
+
+            }
+        });
+    } else {
+        // The virtual file `webui.js` is not included
+        alert('Please add webui.js to your HTML.');
+    }
+});
 
 // TODO: probably need to convert this to a onclick="" call in the html and make a async function to
 //       send all the images to the backend for the OCR stuff to take over.
@@ -75,9 +100,6 @@ async function handleQuery() {
     console.log(file_list);
 
     addUserMessage(query, files);
-    user_history.push(query);
-
-
 
     // remove file preview
     const preview = document.getElementById('filePreview');
@@ -96,10 +118,29 @@ async function handleQuery() {
     // Add a bot placeholder message
     const placeholder = addBotPlaceholderMessage();
 
-    webui.handleChat(user_history.join('|'), bot_history.join('|'), file_list.join('|')).then(resp => {
-        bot_history.push(resp);
+    webui.handleChat(current_hist, query, file_list.join('|')).then(resp => {
         placeholder.remove();
-        addBotMessage(resp);
+        const parts = resp.split("|");
+        if (current_hist === -1) {
+            // TODO: call ui updates here
+            // title change
+            // add a button to sidebar
+            webui.getTitle(parseInt(parts[0], 10)).then(resp => {
+                // title change
+                document.getElementById('chatTitle').innerText = resp;
+                // add a button to sidebar
+                addSidebarButton(parseInt(parts[0], 10), resp)
+            });
+            
+        }
+        current_hist = parseInt(parts[0], 10);
+        console.log("history_id: ", current_hist);
+
+        // Get the remainder as a string.
+        const bot_resp = parts.slice(1).join("|");
+        console.log("bot_resp: ", bot_resp);
+
+        addBotMessage(bot_resp);
         submit_btn.disabled = false;
         file_list = [];
     }).catch(error => {
@@ -229,4 +270,113 @@ function addBotPlaceholderMessage() {
     });
 
     return placeholderDiv;
+}
+
+
+
+// Sidebar functions ----------------------------------------------------------
+// Function to initialize (or reset) the sidebar container.
+async function initSidebar() {
+    const sidebar = document.getElementById("sidebarContainer");
+    if (sidebar) {
+        // Clear out any existing buttons
+        sidebar.innerHTML = "";
+        webui.getChats().then(resp => {
+            let obj = JSON.parse(resp);
+            
+            for (const key in obj) {
+                if (obj.hasOwnProperty(key)) {
+                  const title = obj[key].title;
+                  addSidebarButton(key, title);
+                }
+            }
+        });
+
+    } else {
+        console.warn("Sidebar container element with id 'sidebarContainer' not found.");
+    }
+}
+
+// Function to add a single button to the sidebar.
+// The parameter 'text' represents the button's label.
+function addSidebarButton(hist_id, text) {
+    const sidebar = document.getElementById("sidebarContainer");
+    if (!sidebar) {
+        console.error("Sidebar container element with id 'sidebarContainer' not found.");
+        return;
+    }
+    
+    // Create a container div that stretches its children.
+    const buttonContainer = document.createElement("div");
+    buttonContainer.className = "d-flex align-items-stretch my-2"; // Use align-items-stretch for uniform height
+
+    // Create the main sidebar button that grows to take available space.
+    const mainButton = document.createElement("button");
+    mainButton.id = `hist_id-${hist_id}`;
+    mainButton.type = "button";
+    mainButton.className = "btn btn-secondary flex-grow-1 rounded-0"; // Flex-grow to take all available space
+    mainButton.setAttribute('data-bs-dismiss', "offcanvas");
+    mainButton.textContent = text;
+    mainButton.addEventListener("click", function() {
+        console.log("Sidebar button clicked:", text);
+        document.getElementById('chatTitle').innerText = text;
+        updateChatWindow(hist_id);
+        current_hist = hist_id;
+    });
+    buttonContainer.appendChild(mainButton);
+
+    // Create the delete button that stays on the far right.
+    const deleteButton = document.createElement("button");
+    deleteButton.type = "button";
+    deleteButton.className = "btn btn-outline-danger rounded-0";
+    deleteButton.textContent = "X";
+    // Apply a left margin to push it to the right.
+    deleteButton.style.marginLeft = "auto";
+    deleteButton.addEventListener("click", function() {
+        // When the delete button is clicked, update the chat if this entry is currently active.
+        if (current_hist === hist_id) {
+            current_hist = -1;
+            updateChatWindow(current_hist);
+        }
+        webui.removeHistory(hist_id);
+        buttonContainer.remove();
+    });
+    buttonContainer.appendChild(deleteButton);
+
+    // Append the entire container to the sidebar.
+    sidebar.appendChild(buttonContainer);
+}
+
+
+
+
+// Update Chat window with new chat ===========================================
+async function updateChatWindow(hist_id) {
+    if (hist_id === -1) {
+        document.getElementById('chatBox').innerHTML = '';
+        document.getElementById('chatTitle').innerText = 'Document Assistant';
+        current_hist = -1;
+    } else {
+        webui.getMessages(hist_id).then(resp => {
+            document.getElementById('chatBox').innerHTML = '';
+            let chats = JSON.parse(resp);
+            // field_names=['message', "order_number", "history_id", "role_id"]
+            for (const key in chats) {
+                if (chats.hasOwnProperty(key)) {
+                    const message = chats[key].message;
+                    const order_number = chats[key].order_number;
+                    const history_id = chats[key].history_id;
+                    const rold_id = chats[key].role_id;
+                    
+                    if (rold_id === 1) {
+                        addUserMessage(message); // if docs get handled, they get added here
+                    } else if (rold_id === 2) {
+                        addBotMessage(message);
+                    }
+                    // TODO: maybe doc stuff?
+                    
+                }
+            }
+        });
+    }
 }
