@@ -4,40 +4,61 @@
     <meta charset="UTF-8">
     <title>Creative Team Prototype</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        /* Set a fixed height for the chat area and enable scrolling */
-        .chat-box {
-            height: 89vh;
-            overflow-y: auto;
-            background-color: #f8f9fa;
-	  		padding: 15px;
-			white-space: pre-wrap;
-        }
-        .message {
-          margin-bottom: 15px;
-        }
-      </style>
+    <link rel="stylesheet" type="text/css" href="static/css/styles.css"/>
 </head>
 <body>
-	<div class="container py-1">
-    	<div class="card">
-	      	<!-- Chat header -->
-      		<div class="card-header">
-	        	Document Assistant
-	      	</div>
-	      	<!-- Chat messages container -->
-	      	<div class="card-body chat-box" id="chatBox">
-				<!-- chat messages will be inserted here -->
-	      	</div>
-	      	<!-- Input area for new messages -->
-	      	<div class="card-footer">
-	        	<div class="input-group">
-	          		<input id="chatInput" type="text" class="form-control" placeholder="Type a message">
-	          		<button id="chatBtn" class="btn btn-primary" type="button" onclick="handleQuery();">Send</button>
-        		</div>
-	        </div>
+	<!-- Offcanvas sidebar component -->
+	<div class="offcanvas offcanvas-start" tabindex="-1" id="offcanvasSidebar" aria-labelledby="offcanvasSidebarLabel">
+		<div class="offcanvas-header">
+		  <!-- <h5 class="offcanvas-title" id="offcanvasSidebarLabel">Chat History</h5> -->
+		  <button type="button" class="btn btn-outline-primary" onclick="updateChatWindow(-1);" data-bs-dismiss="offcanvas">New Chat</button>
+		  <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
 		</div>
-	</div>
+		<div class="offcanvas-body">
+		  <!-- Container for buttons populated via JavaScript -->
+		  <div id="sidebarContainer" class="d-flex flex-column">
+			<!-- Sidebar buttons will be added here -->
+		  </div>
+		</div>
+	  </div>
+	
+	  <!-- Sidebar toggle button positioned at the top-left corner -->
+	  <button class="btn btn-primary position-absolute top-0 start-0 m-3" type="button" data-bs-toggle="offcanvas" 
+	  		data-bs-target="#offcanvasSidebar" aria-controls="offcanvasSidebar" style="z-index: 1;">
+		Chats
+	  </button>
+	
+	  <!-- Main chat container -->
+	  <div class="chat-container">
+		<!-- Chat header (no card wrapper) -->
+		<h2 id="chatTitle" class="chat-title">Document Assistant</h2>
+	
+		<!-- Chat messages container; scroll is enabled only here -->
+		<div class="chat-box border border-2" id="chatBox">
+		  <!-- Chat messages will be inserted here dynamically -->
+		</div>
+	
+		<!-- Input area -->
+		<div class="position-relative mt-1">
+		  <!-- Slide-out file preview panel -->
+		  <div id="filePreview"></div>
+		  <div class="input-group">
+			<!-- User input -->
+			<input id="chatInput" type="text" class="form-control" placeholder="Type a message">
+			<!-- Hidden file input -->
+			<input type="file" id="fileInput" accept="image/png, image/jpeg, application/pdf" style="display: none;" multiple>
+			<!-- Upload doc button -->
+			<button id="docBtn" class="btn btn-light mx-2 border rounded-1" type="button">
+			  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-text" viewBox="0 0 16 16">
+				<path d="M5 4a.5.5 0 0 0 0 1h6a.5.5 0 0 0 0-1zm-.5 2.5A.5.5 0 0 1 5 6h6a.5.5 0 0 1 0 1H5a.5.5 0 0 1-.5-.5M5 8a.5.5 0 0 0 0 1h6a.5.5 0 0 0 0-1zm0 2a.5.5 0 0 0 0 1h3a.5.5 0 0 0 0-1z"/>
+				<path d="M2 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2zm10-1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1"/>
+			  </svg>
+			</button>
+			<!-- Send button -->
+			<button id="chatBtn" class="btn btn-primary" type="button" onclick="handleQuery();">Send</button>
+		  </div>
+		</div>
+	  </div>
 
 
 
