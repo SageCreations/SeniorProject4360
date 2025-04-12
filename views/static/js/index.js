@@ -56,7 +56,22 @@ document.getElementById('fileInput').addEventListener('change', function(e) {
             const reader = new FileReader();
             reader.onload = function () {
                 const dataURL = reader.result; 
-                file_list.push(dataURL);
+                
+                if (file.type.startsWith('image/')) {
+                    const img = new Image();
+                    img.onload = function () {
+                        console.log("Image loaded successfully");
+                        const width = img.naturalWidth;
+                        const height = img.naturalHeight;
+                        const augmentedData = `${dataURL},${width},${height}`;
+                        console.log(augmentedData)
+                        file_list.push(augmentedData);
+                    };
+                    img.src = dataURL;
+                   
+                }else {
+                    file_list.push(dataURL);
+                }
             };
             reader.readAsDataURL(file);
 
@@ -87,6 +102,7 @@ document.getElementById('fileInput').addEventListener('change', function(e) {
         preview.classList.remove('active');
     }
 });
+
 
 
 async function handleQuery() {
@@ -357,26 +373,57 @@ async function updateChatWindow(hist_id) {
         document.getElementById('chatTitle').innerText = 'Document Assistant';
         current_hist = -1;
     } else {
-        webui.getMessages(hist_id).then(resp => {
+        webui.getMessages(hist_id).then(mesgResp => {
             document.getElementById('chatBox').innerHTML = '';
-            let chats = JSON.parse(resp);
+            let chats = JSON.parse(mesgResp);
+            message_order = [];
+            
             // field_names=['message', "order_number", "history_id", "role_id"]
             for (const key in chats) {
                 if (chats.hasOwnProperty(key)) {
-                    const message = chats[key].message;
+                    const chat_message = chats[key].message;
                     const order_number = chats[key].order_number;
                     const history_id = chats[key].history_id;
-                    const rold_id = chats[key].role_id;
+                    const role_id = chats[key].role_id;
+                    message_order.push({ key, chat_message, order_number, history_id, role_id });
                     
-                    if (rold_id === 1) {
-                        addUserMessage(message); // if docs get handled, they get added here
-                    } else if (rold_id === 2) {
-                        addBotMessage(message);
-                    }
-                    // TODO: maybe doc stuff?
-                    
+                    // //TODO: idk what todo with this yet
+                    // if (role_id === 1) {
+                    //     // field_names=["history_id", "message", "role_id"]
+                    //     webui.getDocs(hist_id).then(docResp => {
+                    //         let docs = JSON.parse(mesgResp);
+                    //         for (const docKey in docs) {
+                    //             if (docs.hasOwnProperty(docKey)) {
+                    //                 const doc_message = docs[docKey].message;
+                    //                 const doc_history_id = docs[docKey].history_id;
+                    //                 const doc_role_id = docs[docKey].role_id;
+                    //             }
+                    //         }
+                            
+                    //     });
+                    // }
+                    // // TODO: maybe doc stuff
                 }
             }
+            
+            // ensures chat message order
+            message_order.sort((a, b) => a.key - b.key);
+            console.log(message_order);
+            
+            message_order.forEach(item => {
+                switch (item.role_id) {
+                    case 1:
+                    addUserMessage(item.chat_message);
+                    break;
+                    case 2:
+                    addBotMessage(item.chat_message);
+                    break;
+                    default:
+                    break;
+                }
+            });
         });
+        
+        
     }
 }

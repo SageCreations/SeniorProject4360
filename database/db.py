@@ -109,6 +109,10 @@ def delete_role(role_id):
     conn.commit()
     return role_id
 
+# function to insert new doc into table
+def insert_doc(chat_history_id, message, role):
+    cur.execute("INSERT INTO docs (chat_history_id, message, role) VALUES (?, ?, ?)", (chat_history_id, message, role))
+
 
 # Function to get all documents for a given chat history
 def get_docs_by_history(chat_history_id):
@@ -124,12 +128,14 @@ def update_doc(doc_id, new_message):
 
 
 # Function to delete a document by ID
-def delete_doc(doc_id):
-    cur.execute("DELETE FROM docs WHERE id = ?;", (doc_id,))
+def delete_doc(hist_id):
+    cur.execute("DELETE FROM docs WHERE chat_history_id = ?;", (hist_id,))
     conn.commit()
-    return doc_id
+    return hist_id
 
 
+# TODO: Remake the docs table to have the id for the user message 
+#       as a foreign key rather than a role id (not used).
 def init_db():
     cur.executescript(
         """
@@ -167,7 +173,7 @@ def init_db():
 
     user_role = insert_role("user")
     assist_role = insert_role("assistant")
-    print(f"user: {user_role}\nAssistant: {assist_role}")
+    # print(f"user: {user_role}\nAssistant: {assist_role}")
     # hist_id = insert_chat_history()
     # update_chat_history(hist_id, "Main chat")
 
