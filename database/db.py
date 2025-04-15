@@ -5,8 +5,6 @@ import os
 # Globals =====================================================================
 DB_PATH = os.path.join(os.path.dirname(__file__), "chatbot.db")
 conn = sqlite3.connect(DB_PATH, check_same_thread=False)
-cur = conn.cursor()
-
 
 
 # chat_history functions ======================================================
@@ -14,39 +12,60 @@ cur = conn.cursor()
 
 # Funciton to insert chat history
 def insert_chat_history():
-    cur.execute(
-        "INSERT INTO chat_history (title) VALUES (NULL);",
-    )
-    conn.commit()
-    return cur.lastrowid
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            "INSERT INTO chat_history (title) VALUES (NULL);",
+        )
+        conn.commit()
+    finally:
+        resp = cur.lastrowid
+        cur.close()
+    return resp
 
 
 # Function to get chat histories
 def get_chat_histories():
-    cur.execute("SELECT * FROM chat_history;")
-    return cur.fetchall()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT * FROM chat_history;")
+    finally:
+        resp = cur.fetchall()
+        cur.close()
+    return resp
 
 
 # get a singular chat history back, use to get title
 def get_chat_history(hist_id):
-    cur.execute("SELECT id, title FROM chat_history WHERE id = ?;", (hist_id,))
-    return cur.fetchone()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT id, title FROM chat_history WHERE id = ?;", (hist_id,))
+    finally:
+        resp = cur.fetchone()
+        cur.close()
+    return resp
 
 
 # Function to update chat history title
 def update_chat_history(chat_history_id, new_title):
-    cur.execute(
-        "UPDATE chat_history SET title = ? WHERE id = ?;", (new_title, chat_history_id)
-    )
-    conn.commit()
-    return chat_history_id
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            "UPDATE chat_history SET title = ? WHERE id = ?;", (new_title, chat_history_id)
+        )
+        conn.commit()
+    finally:
+        cur.close()
 
 
 # Function to delete chat history by ID (will also delete related chat and docs due to CASCADE)
 def delete_chat_history(chat_history_id):
-    cur.execute("DELETE FROM chat_history WHERE id = ?;", (chat_history_id,))
-    conn.commit()
-    return chat_history_id
+    cur = conn.cursor()
+    try:
+        cur.execute("DELETE FROM chat_history WHERE id = ?;", (chat_history_id,))
+        conn.commit()
+    finally:
+        cur.close()
 
 
 
@@ -55,21 +74,31 @@ def delete_chat_history(chat_history_id):
 
 # Function to insert chat message
 def insert_or_update_chat(message, order_number, chat_history_id, role) -> int:
-    cur.execute(
-        """
-        INSERT INTO chat (message, order_number, chat_history_id, role)
-        VALUES (?, ?, ?, ?);
-    """,
-        (message, order_number, chat_history_id, role),
-    )
-    conn.commit()
-    return int(cur.lastrowid)
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            """
+            INSERT INTO chat (message, order_number, chat_history_id, role)
+            VALUES (?, ?, ?, ?);
+        """,
+            (message, order_number, chat_history_id, role),
+        )
+        conn.commit()
+    finally:
+        resp = int(cur.lastrowid)
+        cur.close()
+    return resp
 
 
 # Function to get all chat messages for given chat history
 def get_chats_by_history(chat_history_id):
-    cur.execute("SELECT * FROM chat WHERE chat_history_id = ?;", (chat_history_id,))
-    return cur.fetchall()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT * FROM chat WHERE chat_history_id = ?;", (chat_history_id,))
+    finally:
+        resp = cur.fetchall()
+        cur.close()
+    return resp
 
 
 # Function to update a chat message
@@ -91,10 +120,14 @@ def delete_chat(chat_id):
 
 # Function to insert role if it doesn't exist
 def insert_role(role_name):
-    cur.execute("INSERT OR IGNORE INTO role (role_name) VALUES (?);", (role_name,))
-    conn.commit()
-    cur.execute("SELECT id FROM role WHERE role_name = ?;", (role_name,))
-    result = cur.fetchone()
+    cur = conn.cursor()
+    try:
+        cur.execute("INSERT OR IGNORE INTO role (role_name) VALUES (?);", (role_name,))
+        conn.commit()
+        cur.execute("SELECT id FROM role WHERE role_name = ?;", (role_name,))
+    finally:
+        result = cur.fetchone()
+        cur.close()
     return result[0] if result else None
 
 
@@ -128,12 +161,17 @@ def create_doc(data_url, message, hist_id, chat_id):
     
     Returns the id of the newly created record.
     """
-    cur.execute('''
-        INSERT INTO docs (data_url, message, chat_history_id, chat_id)
-        VALUES (?, ?, ?, ?)
-    ''', (data_url, message, hist_id, chat_id))
-    conn.commit()
-    return cursor.lastrowid
+    cur = conn.cursor()
+    try:
+        cur.execute('''
+            INSERT INTO docs (data_url, message, chat_history_id, chat_id)
+            VALUES (?, ?, ?, ?)
+        ''', (data_url, message, hist_id, chat_id))
+        conn.commit()
+    finally:
+        resp = cur.lastrowid
+        cur.close()
+    return resp
 
 def get_docs_by_history(chat_history_id) -> list[str]:
     """
@@ -143,15 +181,18 @@ def get_docs_by_history(chat_history_id) -> list[str]:
         The list holds the messages (list[str])
          
     """
-    # Execute the SQL query to select message and data_url where chat_history_id matches.
-    cur.execute("SELECT message FROM docs WHERE chat_history_id = ?", (chat_history_id,))
-    rows = cur.fetchall()
-    
-    # Separate the columns into two lists.
-    messages = rows[0]
-    
+    cur = conn.cursor()
+    try:
+        # Execute the SQL query to select message and data_url where chat_history_id matches.
+        cur.execute("SELECT message FROM docs WHERE chat_history_id = ?", (chat_history_id,))
+    finally:    
+        rows = cur.fetchall()
+        # Separate the columns into two lists.
+        messages = [row[0] for row in rows]
+        cur.close()
+
     # Return a list containing both lists to preserve the ordering.
-    return [messages]
+    return messages
 
 
 def get_docs_by_chat_id(chat_id) -> list[str]:
@@ -162,12 +203,17 @@ def get_docs_by_chat_id(chat_id) -> list[str]:
         The list holds the data_urls (list[str])
     """
     # Execute the SQL query to select message and data_url where chat_history_id matches.
-    cur.execute("SELECT data_url FROM docs WHERE chat_id = ?", (chat_id,))
-    rows = cur.fetchall()
-    
-    # Separate the columns into two lists.
-    data_urls = rows[0]
-    
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT data_url FROM docs WHERE chat_id = ?", (chat_id,))
+    finally:
+        rows = cur.fetchall()
+        #print(rows)
+        # Separate the columns into two lists.
+        data_urls = [row[0] for row in rows]
+        #print(data_urls)
+        cur.close()
+        
     # Return a list containing both lists to preserve the ordering.
     return data_urls
 
@@ -216,44 +262,48 @@ def get_cohere_key() -> str:
 # TODO: Remake the docs table to have the id for the user message 
 #       as a foreign key rather than a role id (not used).
 def init_db():
-    cur.executescript(
+    cur = conn.cursor()
+    try:
+        cur.executescript(
+            """
+            CREATE TABLE IF NOT EXISTS role (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                role_name TEXT UNIQUE NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS chat_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT
+            );
+
+            CREATE TABLE IF NOT EXISTS docs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                data_url TEXT,
+                message TEXT,
+                chat_history_id INTEGER,
+                chat_id INTEGER,
+                FOREIGN KEY (chat_history_id) REFERENCES chat_history(id) ON DELETE CASCADE,
+                FOREIGN KEY (chat_id) REFERENCES chat(id)
+            );
+
+            CREATE TABLE IF NOT EXISTS chat (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                message TEXT NOT NULL,
+                order_number INTEGER NOT NULL,
+                chat_history_id INTEGER NOT NULL,
+                role INTEGER NOT NULL,
+                FOREIGN KEY (chat_history_id) REFERENCES chat_history(id) ON DELETE CASCADE,
+                FOREIGN KEY (role) REFERENCES role(id) ON DELETE CASCADE
+            );
+
+            CREATE TABLE IF NOT EXISTS cohere_key (
+                key TEXT
+            );
         """
-        CREATE TABLE IF NOT EXISTS role (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            role_name TEXT UNIQUE NOT NULL
-        );
-
-        CREATE TABLE IF NOT EXISTS chat_history (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT
-        );
-
-        CREATE TABLE IF NOT EXISTS docs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            data_url TEXT,
-            message TEXT,
-            chat_history_id INTEGER,
-            chat_id INTEGER,
-            FOREIGN KEY (chat_history_id) REFERENCES chat_history(id) ON DELETE CASCADE,
-            FOREIGN KEY (chat_id) REFERENCES chat(id)
-        );
-
-        CREATE TABLE IF NOT EXISTS chat (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            message TEXT NOT NULL,
-            order_number INTEGER NOT NULL,
-            chat_history_id INTEGER NOT NULL,
-            role INTEGER NOT NULL,
-            FOREIGN KEY (chat_history_id) REFERENCES chat_history(id) ON DELETE CASCADE,
-            FOREIGN KEY (role) REFERENCES role(id) ON DELETE CASCADE
-        );
-
-        CREATE TABLE IF NOT EXISTS cohere_key (
-            key TEXT
-        );
-    """
-    )
-    conn.commit()
+        )
+        conn.commit()
+    finally:
+        cur.close()
 
     user_role = insert_role("user")
     assist_role = insert_role("assistant")

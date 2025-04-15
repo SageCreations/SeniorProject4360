@@ -77,7 +77,7 @@ def handle_text(hist_id: int) -> str:
 
 
     # get doc messages only
-    docs: list[str] = db.get_docs_by_history(hist_id)[0]
+    docs: list[str] = db.get_docs_by_history(hist_id)
     print(docs)
     res = co.chat(
         model="command-r-plus-08-2024",
@@ -120,6 +120,7 @@ def handle_docs(hist_id: int, chat_id: int, file_list: list[str]):
             width=width
         )
         doc_message: str = ocr.handle_image(img)
+        print("mesg: ", doc_message)
 
         db.create_doc(data_url, doc_message, hist_id, chat_id)
 
@@ -148,7 +149,6 @@ def handle_chat(e: ui.Event):
     if file_list != [''] :
         handle_docs(hist_id, chat_id, file_list)
 
-    # TODO: this needs to be doc list return from the database
     resp = f"{hist_id}|{handle_text(hist_id)}"
     e.return_string(resp)
 
@@ -175,8 +175,7 @@ def get_title(e: ui.Event):
 
 def delete_history(e: ui.Event):
     hist_id = e.get_int_at(0)
-    row_id = db.delete_chat_history(hist_id)
-    doc_row_id = db.delete_doc(hist_id)
+    db.delete_chat_history(hist_id)
 
 
 def get_chats_from_hist(e: ui.Event):

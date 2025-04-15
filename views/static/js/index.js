@@ -413,7 +413,7 @@ async function updateChatWindow(hist_id) {
             document.getElementById('chatBox').innerHTML = '';
             let chats = JSON.parse(mesgResp);
             message_order = [];
-            let docs = [];
+            let doc_list = [];
             
             // field_names=['message', "order_number", "history_id", "role_id"]
             for (const key in chats) {
@@ -429,13 +429,12 @@ async function updateChatWindow(hist_id) {
                         // field_names=["history_id", "message", "role_id"]
                         webui.getDocs(key).then(docResp => {
                             url_list = docResp.split('|');
-                            let doc_list = [];
+                            
                             Array.from(url_list).forEach(url => {
                                 doc_list.push(dataURLtoFile(url));
                             });
                         });
                     }
-                    // TODO: maybe doc stuff
                 }
             }
             
@@ -446,13 +445,14 @@ async function updateChatWindow(hist_id) {
             message_order.forEach(item => {
                 switch (item.role_id) {
                     case 1:
-                    addUserMessage(item.chat_message, doc_list); // TODO: add 'doc_list' here when safe
-                    break;
+                        console.log("doc_list: ", doc_list)
+                        addUserMessage(item.chat_message, doc_list); // TODO: add 'doc_list' here when safe
+                        break;
                     case 2:
-                    addBotMessage(item.chat_message);
-                    break;
+                        addBotMessage(item.chat_message);
+                        break;
                     default:
-                    break;
+                        break;
                 }
             });
         });

@@ -31,7 +31,7 @@ class ImageInfo:
 def handle_image(file: ImageInfo) -> str:
     
     images: list[Image] = []
-    document_data: str = ""
+    document_data: list[str] = []
       
     if current_os == "Windows":
         pytesseract.pytesseract.tesseract_cmd = '.\\windows\\Tesseract-OCR\\tesseract.exe'
