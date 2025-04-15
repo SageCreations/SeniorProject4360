@@ -33,15 +33,16 @@ def handle_images(file_list: list[ImageInfo]) -> list[str]:
     document_data: list [str] = []
       
     if current_os == "Windows":
-        pytesseract.pytesseract.tesseract_cmd = '.\windows\Tesseract-OCR\tesseract.exe'
+        pytesseract.pytesseract.tesseract_cmd = '.\\windows\\Tesseract-OCR\\tesseract.exe'
+        path_to_poppler_exe = Path('OCR\\poppler-24.08.0\\Library\\bin')
     elif current_os == "Linux":
-        pytesseract.pytesseract.tesseract_cmd = 'OCR/linux/bin/tesseract'
+        pytesseract.pytesseract.tesseract_cmd = 'OCR/linux/tesseract/bin/tesseract'
+        path_to_poppler_exe = 'OCR/linux/poppler/bin'
     elif current_os == "Darwin":  # macOS returns 'Darwin'
-        pytesseract.pytesseract.tesseract_cmd = './darwin/bin/tesseract'
+        pytesseract.pytesseract.tesseract_cmd = 'OCR/darwin/tesseract/bin/tesseract'
+        path_to_poppler_exe = 'OCR/darwin/poppler/bin'
     else:
         raise Exception("Unsupported OS")
-       
-    #path_to_poppler_exe = Path('..\data\poppler-24.08.0\Library\bin')
        
      #Test each file in the list if its a PDF or an Image.   
        
@@ -49,7 +50,7 @@ def handle_images(file_list: list[ImageInfo]) -> list[str]:
         #Test if the File type passed is a pdf.
         if file.file_type == "application/pdf":
             #Convert the PDF into a list of images using PIL/PDF2Image.
-            pdf_pages = pdf2image.convert_from_bytes(file.file_data, 500)
+            pdf_pages = pdf2image.convert_from_bytes(file.file_data, 500, poppler_path=path_to_poppler_exe)
             
             # Iterate through all the images of the PDF and add them to the list page.
             for page_enumeration, page in enumerate(pdf_pages, start=1):

@@ -128,7 +128,7 @@ def handle_chat(e: ui.Event):
     user_files_str = e.get_string_at(2)
     
     file_list = user_files_str.split('|')
-    print(file_list)
+    # print(file_list)
     # Create new history if -1
     if hist_id == -1:
         hist_id = db.insert_chat_history()
