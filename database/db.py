@@ -2,13 +2,14 @@ import sqlite3
 import os
 
 # Filename for database "chatbot.db"
-
+# Globals =====================================================================
 DB_PATH = os.path.join(os.path.dirname(__file__), "chatbot.db")
 conn = sqlite3.connect(DB_PATH, check_same_thread=False)
 cur = conn.cursor()
 
 
 
+# chat_history functions ======================================================
 
 
 # Funciton to insert chat history
@@ -48,8 +49,12 @@ def delete_chat_history(chat_history_id):
     return chat_history_id
 
 
+
+# chat functions ==============================================================
+
+
 # Function to insert chat message
-def insert_or_update_chat(message, order_number, chat_history_id, role):
+def insert_or_update_chat(message, order_number, chat_history_id, role) -> int:
     cur.execute(
         """
         INSERT INTO chat (message, order_number, chat_history_id, role)
@@ -58,7 +63,7 @@ def insert_or_update_chat(message, order_number, chat_history_id, role):
         (message, order_number, chat_history_id, role),
     )
     conn.commit()
-    return cur.lastrowid
+    return int(cur.lastrowid)
 
 
 # Function to get all chat messages for given chat history
@@ -79,6 +84,9 @@ def delete_chat(chat_id):
     cur.execute("DELETE FROM chat WHERE id = ?;", (chat_id,))
     conn.commit()
     return chat_id
+
+
+# role functions ==============================================================
 
 
 # Function to insert role if it doesn't exist
@@ -109,15 +117,59 @@ def delete_role(role_id):
     conn.commit()
     return role_id
 
+
+# doc functions ===============================================================
+
+
 # function to insert new doc into table
-def insert_doc(chat_history_id, message, role):
-    cur.execute("INSERT INTO docs (chat_history_id, message, role) VALUES (?, ?, ?)", (chat_history_id, message, role))
+def create_doc(data_url, message, hist_id, chat_id):
+    """
+    Insert a new document into the docs table.
+    
+    Returns the id of the newly created record.
+    """
+    cur.execute('''
+        INSERT INTO docs (data_url, message, chat_history_id, chat_id)
+        VALUES (?, ?, ?, ?)
+    ''', (data_url, message, hist_id, chat_id))
+    conn.commit()
+    return cursor.lastrowid
+
+def get_docs_by_history(chat_history_id) -> list[str]:
+    """
+    Retrieve messages and data_urls from the docs table for all records matching the given chat_history_id.
+    
+    Returns:
+        The list holds the messages (list[str])
+         
+    """
+    # Execute the SQL query to select message and data_url where chat_history_id matches.
+    cur.execute("SELECT message FROM docs WHERE chat_history_id = ?", (chat_history_id,))
+    rows = cur.fetchall()
+    
+    # Separate the columns into two lists.
+    messages = rows[0]
+    
+    # Return a list containing both lists to preserve the ordering.
+    return [messages]
 
 
-# Function to get all documents for a given chat history
-def get_docs_by_history(chat_history_id):
-    cur.execute("SELECT * FROM docs WHERE chat_history_id = ?;", (chat_history_id,))
-    return cur.fetchall()
+def get_docs_by_chat_id(chat_id) -> list[str]:
+    """
+    Retrieve messages and data_urls from the docs table for all records matching the given chat_history_id.
+    
+    Returns:
+        The list holds the data_urls (list[str])
+    """
+    # Execute the SQL query to select message and data_url where chat_history_id matches.
+    cur.execute("SELECT data_url FROM docs WHERE chat_id = ?", (chat_id,))
+    rows = cur.fetchall()
+    
+    # Separate the columns into two lists.
+    data_urls = rows[0]
+    
+    # Return a list containing both lists to preserve the ordering.
+    return data_urls
 
 
 # Function to update a document message
@@ -127,13 +179,40 @@ def update_doc(doc_id, new_message):
     return doc_id
 
 
-# Function to delete a document by ID
-def delete_doc(hist_id):
-    cur.execute("DELETE FROM docs WHERE chat_history_id = ?;", (hist_id,))
+def delete_docs_by_chat_id(hist_id):
+    """
+    Delete all records from the docs table that match the given chat_id.
+    """
+    cur.execute("DELETE FROM docs WHERE chat_history_id = ?", (hist_id,))
     conn.commit()
-    return hist_id
 
 
+# cohere_key functions ========================================================
+
+
+def update_cohere_key(new_key):
+    """
+    Update the cohere_key table by deleting any existing entries
+    and inserting the new key value. Only one entry exists at any time.
+    """
+    # Remove any existing entries
+    cur.execute("DELETE FROM cohere_key")
+    # Insert the new key value
+    cur.execute("INSERT INTO cohere_key (key) VALUES (?)", (new_key,))
+    conn.commit()
+
+
+def get_cohere_key() -> str:
+    """
+    Retrieve the current key value from the cohere_key table.
+    Returns the key as a string if available, otherwise returns None.
+    """
+    cur.execute("SELECT key FROM cohere_key LIMIT 1")
+    row = cursor.fetchone()
+    return row[0] if row else None
+
+
+# =============================================================================
 # TODO: Remake the docs table to have the id for the user message 
 #       as a foreign key rather than a role id (not used).
 def init_db():
@@ -151,11 +230,12 @@ def init_db():
 
         CREATE TABLE IF NOT EXISTS docs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            chat_history_id INTEGER NOT NULL,
+            data_url TEXT,
             message TEXT,
-            role INTEGER NOT NULL,
+            chat_history_id INTEGER,
+            chat_id INTEGER,
             FOREIGN KEY (chat_history_id) REFERENCES chat_history(id) ON DELETE CASCADE,
-            FOREIGN KEY (role) REFERENCES role(id) ON DELETE CASCADE
+            FOREIGN KEY (chat_id) REFERENCES chat(id)
         );
 
         CREATE TABLE IF NOT EXISTS chat (
@@ -166,6 +246,10 @@ def init_db():
             role INTEGER NOT NULL,
             FOREIGN KEY (chat_history_id) REFERENCES chat_history(id) ON DELETE CASCADE,
             FOREIGN KEY (role) REFERENCES role(id) ON DELETE CASCADE
+        );
+
+        CREATE TABLE IF NOT EXISTS cohere_key (
+            key TEXT
         );
     """
     )

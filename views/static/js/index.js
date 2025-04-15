@@ -113,7 +113,8 @@ async function handleQuery() {
     // Get the file input element and its files
     const fileInput = document.getElementById('fileInput');
     const files = fileInput.files; // This is a FileList object
-    console.log(file_list);
+    console.log("files: ", files)
+    console.log("files_list: ", file_list);
 
     addUserMessage(query, files);
 
@@ -366,6 +367,41 @@ function addSidebarButton(hist_id, text) {
 
 
 
+
+
+/**
+ * Converts a data URL to a File object.
+ * @param {string} dataURL - The data URL string.
+ * @param {string} filename - The name for the new File.
+ * @returns {File} - The reconstructed File object.
+ */
+function dataURLtoFile(dataURL) {
+    // Split the data URL at the comma
+    const arr = dataURL.split(',');
+    
+    // Extract the MIME type using a regular expression
+    const mimeMatch = arr[0].match(/:(.*?);/);
+    if (!mimeMatch) {
+      throw new Error('Invalid data URL.');
+    }
+    const mime = mimeMatch[1];
+    
+    // Decode base64 encoded string
+    const bstr = atob(arr[1]);
+    
+    // Create an array of bytes
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    
+    // Construct a File object with the name, data, and MIME type
+    return new File([u8arr], "file", { type: mime });
+}
+
+
 // Update Chat window with new chat ===========================================
 async function updateChatWindow(hist_id) {
     if (hist_id === -1) {
@@ -377,6 +413,7 @@ async function updateChatWindow(hist_id) {
             document.getElementById('chatBox').innerHTML = '';
             let chats = JSON.parse(mesgResp);
             message_order = [];
+            let docs = [];
             
             // field_names=['message', "order_number", "history_id", "role_id"]
             for (const key in chats) {
@@ -388,21 +425,17 @@ async function updateChatWindow(hist_id) {
                     message_order.push({ key, chat_message, order_number, history_id, role_id });
                     
                     // //TODO: idk what todo with this yet
-                    // if (role_id === 1) {
-                    //     // field_names=["history_id", "message", "role_id"]
-                    //     webui.getDocs(hist_id).then(docResp => {
-                    //         let docs = JSON.parse(mesgResp);
-                    //         for (const docKey in docs) {
-                    //             if (docs.hasOwnProperty(docKey)) {
-                    //                 const doc_message = docs[docKey].message;
-                    //                 const doc_history_id = docs[docKey].history_id;
-                    //                 const doc_role_id = docs[docKey].role_id;
-                    //             }
-                    //         }
-                            
-                    //     });
-                    // }
-                    // // TODO: maybe doc stuff
+                    if (role_id === 1) {
+                        // field_names=["history_id", "message", "role_id"]
+                        webui.getDocs(key).then(docResp => {
+                            url_list = docResp.split('|');
+                            let doc_list = [];
+                            Array.from(url_list).forEach(url => {
+                                doc_list.push(dataURLtoFile(url));
+                            });
+                        });
+                    }
+                    // TODO: maybe doc stuff
                 }
             }
             
@@ -413,7 +446,7 @@ async function updateChatWindow(hist_id) {
             message_order.forEach(item => {
                 switch (item.role_id) {
                     case 1:
-                    addUserMessage(item.chat_message);
+                    addUserMessage(item.chat_message, doc_list); // TODO: add 'doc_list' here when safe
                     break;
                     case 2:
                     addBotMessage(item.chat_message);

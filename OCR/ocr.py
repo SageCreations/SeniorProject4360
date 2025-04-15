@@ -11,6 +11,7 @@ import pdf2image
 from PIL import Image
 
 current_os = platform.system()
+print(current_os)
 
 #class to store the data passed from the front end.
 class ImageInfo:
@@ -27,10 +28,10 @@ class ImageInfo:
     
     
 #function to handle the byte data passed from the front end.
-def handle_images(file_list: list[ImageInfo]) -> list[str]:
+def handle_image(file: ImageInfo) -> str:
     
     images: list[Image] = []
-    document_data: list [str] = []
+    document_data: str = ""
       
     if current_os == "Windows":
         pytesseract.pytesseract.tesseract_cmd = '.\\windows\\Tesseract-OCR\\tesseract.exe'
@@ -46,27 +47,25 @@ def handle_images(file_list: list[ImageInfo]) -> list[str]:
        
      #Test each file in the list if its a PDF or an Image.   
        
-    for file in file_list:
-        #Test if the File type passed is a pdf.
-        if file.file_type == "application/pdf":
-            #Convert the PDF into a list of images using PIL/PDF2Image.
-            pdf_pages = pdf2image.convert_from_bytes(file.file_data, 500, poppler_path=path_to_poppler_exe)
-            
-            # Iterate through all the images of the PDF and add them to the list page.
-            for page_enumeration, page in enumerate(pdf_pages, start=1):
-                images.append(page)
-        
-        #The front end should only accept images and PDFs at the moment so everything else
-        #passed will be an image.  
-        else:
-            img = Image.open(io.BytesIO(file.file_data))
-            images.append(img)
     
-    #Iterate through the list of images to convert them into a list of strings
-    #using pytesseract as the OCR.
+    #Test if the File type passed is a pdf.
+    if file.file_type == "application/pdf":
+        #Convert the PDF into a list of images using PIL/PDF2Image.
+        pdf_pages = pdf2image.convert_from_bytes(file.file_data, 500, poppler_path=path_to_poppler_exe)
+        
+        # Iterate through all the images of the PDF and add them to the list page.
+        for page_enumeration, page in enumerate(pdf_pages, start=1):
+            images.append(page)
+     
+    else:
+        img = Image.open(io.BytesIO(file.file_data))
+        images.append(img)
+    
+    # Iterate through the list of images to extract the text 
+    # using pytesseract as the OCR.
     for image in images:
         document_data.append(pytesseract.image_to_string(image))
     
-    #Pass the document_data back to the database as a list of strings.
-    return document_data
+    # return a single string of document_data concatentated with " "
+    return " ".join(document_data)
   

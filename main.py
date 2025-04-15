@@ -58,7 +58,7 @@ def create_title(user_msg: str) -> str:
 
 
 # handle the chat message for the user
-def handle_text(hist_id: int, docs: list[str]) -> str:
+def handle_text(hist_id: int) -> str:
     # Define a system message
     system_message = ""
 
@@ -75,7 +75,10 @@ def handle_text(hist_id: int, docs: list[str]) -> str:
             else:
                 messages.append({"role": "assistant", "content": mesg})
 
-    # print(docs)
+
+    # get doc messages only
+    docs: list[str] = db.get_docs_by_history(hist_id)[0]
+    print(docs)
     res = co.chat(
         model="command-r-plus-08-2024",
         messages=messages,
@@ -93,13 +96,14 @@ def handle_text(hist_id: int, docs: list[str]) -> str:
     return res.message.content[0].text
 
 
-def convert_files_to_string(file_list: list[str]) -> list[str]:
-    images: list[ocr.ImageInfo] = []
+def handle_docs(hist_id: int, chat_id: int, file_list: list[str]):
     for file in file_list:
         parts = file.split(",")
+        data_url = parts[0] + "," + parts[1]
         metadata = parts[0]
         base64_data = parts[1] 
         file_type = metadata.split(";")[0].split(":")[1]
+        
         # print(file_type)
         if file_type == "application/pdf":
             width: int = 612
@@ -115,13 +119,12 @@ def convert_files_to_string(file_list: list[str]) -> list[str]:
             height=height,
             width=width
         )
-        images.append(img)
+        doc_message: str = ocr.handle_image(img)
 
-    docs: list[str] = ocr.handle_images(images)
-        
-    return docs
+        db.create_doc(data_url, doc_message, hist_id, chat_id)
 
-
+    
+  
 def handle_chat(e: ui.Event):
     hist_id = e.get_int_at(0)
     user_str = e.get_string_at(1)
@@ -135,23 +138,18 @@ def handle_chat(e: ui.Event):
         db.update_chat_history(hist_id, create_title(user_str))
     
     # add user message to db
-    db.insert_or_update_chat(
+    chat_id = db.insert_or_update_chat(
         message=user_str, 
         order_number=1, 
         chat_history_id=hist_id,
         role=1
     )
 
-    doc_list: list[str] = []
     if file_list != [''] :
-        doc_list = convert_files_to_string(file_list)
+        handle_docs(hist_id, chat_id, file_list)
 
-    # store docs into database
-    for doc in doc_list:
-        if doc != "":
-            db.insert_doc(hist_id, doc, 1)
-
-    resp = f"{hist_id}|{handle_text(hist_id, doc_list)}"
+    # TODO: this needs to be doc list return from the database
+    resp = f"{hist_id}|{handle_text(hist_id)}"
     e.return_string(resp)
 
 
@@ -189,11 +187,10 @@ def get_chats_from_hist(e: ui.Event):
     json_str = convert_tuples_to_json(chat_logs, key_index=0, field_names=['message', "order_number", "history_id", "role_id"])
     e.return_string(json_str)
 
-def get_docs_from_hist(e: ui.Event):
-    hist_id = e.get_int_at(0)
-    doc_logs = db.get_docs_by_history(hist_id)
-    doc_str = convert_tuples_to_json(doc_logs, key_index=0, field_names=["history_id", "message", "role_id"])
-    e.return_string(doc_str)
+def get_docs_for_chat_message(e: ui.Event):
+    chat_id = e.get_int_at(0)
+    doc_logs = db.get_docs_by_chat_id(chat_id)  # get data_urls from docs
+    e.return_string("|".join(doc_logs))
 
 # =============================================================================
 
@@ -213,7 +210,7 @@ def main():
     my_window.bind("handleChat", handle_chat)
     my_window.bind("getChats", get_histories)
     my_window.bind("getMessages", get_chats_from_hist)
-    my_window.bind("getDocs", get_docs_from_hist)
+    my_window.bind("getDocs", get_docs_for_chat_message)
     my_window.bind("removeHistory", delete_history)
     my_window.bind("getTitle", get_title)
 
