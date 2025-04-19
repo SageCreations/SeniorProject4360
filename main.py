@@ -35,9 +35,11 @@ def convert_tuples_to_json(data, key_index=0, field_names=None):
     # Serialize the dictionary into a JSON string
     return json.dumps(result)
 
+
 # =============================================================================
 
 # Chat Request functions ======================================================
+
 
 # create a history title for the database
 def create_title(user_msg: str) -> str:
@@ -49,11 +51,8 @@ def create_title(user_msg: str) -> str:
     if user_msg == "":
         user_msg = " "
     messages.append({"role": "user", "content": user_msg})
-    
-    res = co.chat(
-        model="command-r-plus-08-2024",
-        messages=messages
-    )
+
+    res = co.chat(model="command-r-plus-08-2024", messages=messages)
     return res.message.content[0].text
 
 
@@ -75,7 +74,6 @@ def handle_text(hist_id: int) -> str:
             else:
                 messages.append({"role": "assistant", "content": mesg})
 
-
     # get doc messages only
     docs: list[str] = db.get_docs_by_history(hist_id)
     print(docs)
@@ -90,7 +88,7 @@ def handle_text(hist_id: int) -> str:
         message=res.message.content[0].text,
         order_number=1,
         chat_history_id=hist_id,
-        role=2
+        role=2,
     )
 
     return res.message.content[0].text
@@ -101,9 +99,9 @@ def handle_docs(hist_id: int, chat_id: int, file_list: list[str]):
         parts = file.split(",")
         data_url = parts[0] + "," + parts[1]
         metadata = parts[0]
-        base64_data = parts[1] 
+        base64_data = parts[1]
         file_type = metadata.split(";")[0].split(":")[1]
-        
+
         # print(file_type)
         if file_type == "application/pdf":
             width: int = 612
@@ -111,42 +109,35 @@ def handle_docs(hist_id: int, chat_id: int, file_list: list[str]):
         else:
             width: int = int(parts[2])
             height: int = int(parts[3])
-        
+
         decoded_string = base64.b64decode(base64_data)
         img = ocr.ImageInfo(
-            file_data=decoded_string,
-            file_type=file_type,
-            height=height,
-            width=width
+            file_data=decoded_string, file_type=file_type, height=height, width=width
         )
         doc_message: str = ocr.handle_image(img)
         print("mesg: ", doc_message)
 
         db.create_doc(data_url, doc_message, hist_id, chat_id)
 
-    
-  
+
 def handle_chat(e: ui.Event):
     hist_id = e.get_int_at(0)
     user_str = e.get_string_at(1)
     user_files_str = e.get_string_at(2)
-    
-    file_list = user_files_str.split('|')
+
+    file_list = user_files_str.split("|")
     # print(file_list)
     # Create new history if -1
     if hist_id == -1:
         hist_id = db.insert_chat_history()
         db.update_chat_history(hist_id, create_title(user_str))
-    
+
     # add user message to db
     chat_id = db.insert_or_update_chat(
-        message=user_str, 
-        order_number=1, 
-        chat_history_id=hist_id,
-        role=1
+        message=user_str, order_number=1, chat_history_id=hist_id, role=1
     )
 
-    if file_list != [''] :
+    if file_list != [""]:
         handle_docs(hist_id, chat_id, file_list)
 
     resp = f"{hist_id}|{handle_text(hist_id)}"
@@ -158,7 +149,7 @@ def handle_chat(e: ui.Event):
 def get_histories(e: ui.Event):
     hist_logs = db.get_chat_histories()
     # print(hist_logs)
-    json_str = convert_tuples_to_json(hist_logs, key_index=0, field_names=['title'])
+    json_str = convert_tuples_to_json(hist_logs, key_index=0, field_names=["title"])
 
     e.return_string(json_str)
 
@@ -168,7 +159,7 @@ def get_title(e: ui.Event):
     resp = db.get_chat_history(hist_id)
     if resp == None:
         resp = "No Title"
-    else: 
+    else:
         resp = resp[1]
     e.return_string(resp)
 
@@ -176,20 +167,27 @@ def get_title(e: ui.Event):
 def delete_history(e: ui.Event):
     hist_id = e.get_int_at(0)
     db.delete_chat_history(hist_id)
+    db.delete_chat_by_history(hist_id)
 
 
 def get_chats_from_hist(e: ui.Event):
     hist_id = e.get_int_at(0)
-    
+
     chat_logs = db.get_chats_by_history(hist_id)
-    
-    json_str = convert_tuples_to_json(chat_logs, key_index=0, field_names=['message', "order_number", "history_id", "role_id"])
+
+    json_str = convert_tuples_to_json(
+        chat_logs,
+        key_index=0,
+        field_names=["message", "order_number", "history_id", "role_id"],
+    )
     e.return_string(json_str)
+
 
 def get_docs_for_chat_message(e: ui.Event):
     chat_id = e.get_int_at(0)
     doc_logs = db.get_docs_by_chat_id(chat_id)  # get data_urls from docs
     e.return_string("|".join(doc_logs))
+
 
 # =============================================================================
 
@@ -199,9 +197,9 @@ def main():
     #     print(f"'db' exists.")
     # else:
     #     print(f"'db' does not exist.")
-    
+
     my_window = ui.Window()
-    
+
     # TODO: switch these out when building an executable
     my_window.set_root_folder("views")
     # my_window.set_root_folder("_internal/views")
@@ -215,6 +213,7 @@ def main():
 
     my_window.show_browser("index.html", my_window.get_best_browser())
     ui.wait()
+
 
 if __name__ == "__main__":
     main()

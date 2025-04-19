@@ -51,7 +51,8 @@ def update_chat_history(chat_history_id, new_title):
     cur = conn.cursor()
     try:
         cur.execute(
-            "UPDATE chat_history SET title = ? WHERE id = ?;", (new_title, chat_history_id)
+            "UPDATE chat_history SET title = ? WHERE id = ?;",
+            (new_title, chat_history_id),
         )
         conn.commit()
     finally:
@@ -66,7 +67,6 @@ def delete_chat_history(chat_history_id):
         conn.commit()
     finally:
         cur.close()
-
 
 
 # chat functions ==============================================================
@@ -103,6 +103,7 @@ def get_chats_by_history(chat_history_id):
 
 # Function to update a chat message
 def update_chat(chat_id, new_message):
+    cur = conn.cursor()
     cur.execute("UPDATE chat SET message = ? WHERE id = ?;", (new_message, chat_id))
     conn.commit()
     return chat_id
@@ -110,9 +111,21 @@ def update_chat(chat_id, new_message):
 
 # Function to delete a chat message by ID
 def delete_chat(chat_id):
+    cur = conn.cursor()
     cur.execute("DELETE FROM chat WHERE id = ?;", (chat_id,))
     conn.commit()
     return chat_id
+
+
+# Function to delete a chat message by chat_history_id
+def delete_chat_by_history(chat_history_id):
+    cur = conn.cursor()
+    try:
+        cur.execute("DELETE FROM chat WHERE chat_history_id = ?;", (chat_history_id,))
+        conn.commit()
+    finally:
+        cur.close()
+    return chat_history_id
 
 
 # role functions ==============================================================
@@ -133,12 +146,14 @@ def insert_role(role_name):
 
 # Function to get roles
 def get_roles():
+    cur = conn.cursor()
     cur.execute("SELECT * FROM role;")
     return cur.fetchall()
 
 
 # Function to update role name
 def update_role(role_id, new_role_name):
+    cur = conn.cursor()
     cur.execute("UPDATE role SET role_name = ? WHERE id = ?;", (new_role_name, role_id))
     conn.commit()
     return role_id
@@ -146,6 +161,7 @@ def update_role(role_id, new_role_name):
 
 # Function to delete a role by ID
 def delete_role(role_id):
+    cur = conn.cursor()
     cur.execute("DELETE FROM role WHERE id = ?;", (role_id,))
     conn.commit()
     return role_id
@@ -158,34 +174,40 @@ def delete_role(role_id):
 def create_doc(data_url, message, hist_id, chat_id):
     """
     Insert a new document into the docs table.
-    
+
     Returns the id of the newly created record.
     """
     cur = conn.cursor()
     try:
-        cur.execute('''
+        cur.execute(
+            """
             INSERT INTO docs (data_url, message, chat_history_id, chat_id)
             VALUES (?, ?, ?, ?)
-        ''', (data_url, message, hist_id, chat_id))
+        """,
+            (data_url, message, hist_id, chat_id),
+        )
         conn.commit()
     finally:
         resp = cur.lastrowid
         cur.close()
     return resp
 
+
 def get_docs_by_history(chat_history_id) -> list[str]:
     """
     Retrieve messages and data_urls from the docs table for all records matching the given chat_history_id.
-    
+
     Returns:
         The list holds the messages (list[str])
-         
+
     """
     cur = conn.cursor()
     try:
         # Execute the SQL query to select message and data_url where chat_history_id matches.
-        cur.execute("SELECT message FROM docs WHERE chat_history_id = ?", (chat_history_id,))
-    finally:    
+        cur.execute(
+            "SELECT message FROM docs WHERE chat_history_id = ?", (chat_history_id,)
+        )
+    finally:
         rows = cur.fetchall()
         # Separate the columns into two lists.
         messages = [row[0] for row in rows]
@@ -198,7 +220,7 @@ def get_docs_by_history(chat_history_id) -> list[str]:
 def get_docs_by_chat_id(chat_id) -> list[str]:
     """
     Retrieve messages and data_urls from the docs table for all records matching the given chat_history_id.
-    
+
     Returns:
         The list holds the data_urls (list[str])
     """
@@ -208,18 +230,19 @@ def get_docs_by_chat_id(chat_id) -> list[str]:
         cur.execute("SELECT data_url FROM docs WHERE chat_id = ?", (chat_id,))
     finally:
         rows = cur.fetchall()
-        #print(rows)
+        # print(rows)
         # Separate the columns into two lists.
         data_urls = [row[0] for row in rows]
-        #print(data_urls)
+        # print(data_urls)
         cur.close()
-        
+
     # Return a list containing both lists to preserve the ordering.
     return data_urls
 
 
 # Function to update a document message
 def update_doc(doc_id, new_message):
+    cur = conn.cursor()
     cur.execute("UPDATE docs SET message = ? WHERE id = ?;", (new_message, doc_id))
     conn.commit()
     return doc_id
@@ -229,6 +252,7 @@ def delete_docs_by_chat_id(hist_id):
     """
     Delete all records from the docs table that match the given chat_id.
     """
+    cur = conn.cursor()
     cur.execute("DELETE FROM docs WHERE chat_history_id = ?", (hist_id,))
     conn.commit()
 
@@ -242,6 +266,7 @@ def update_cohere_key(new_key):
     and inserting the new key value. Only one entry exists at any time.
     """
     # Remove any existing entries
+    cur = conn.cursor()
     cur.execute("DELETE FROM cohere_key")
     # Insert the new key value
     cur.execute("INSERT INTO cohere_key (key) VALUES (?)", (new_key,))
@@ -253,13 +278,14 @@ def get_cohere_key() -> str:
     Retrieve the current key value from the cohere_key table.
     Returns the key as a string if available, otherwise returns None.
     """
+    cur = conn.cursor()
     cur.execute("SELECT key FROM cohere_key LIMIT 1")
-    row = cursor.fetchone()
+    row = cur.fetchone()
     return row[0] if row else None
 
 
 # =============================================================================
-# TODO: Remake the docs table to have the id for the user message 
+# TODO: Remake the docs table to have the id for the user message
 #       as a foreign key rather than a role id (not used).
 def init_db():
     cur = conn.cursor()
@@ -316,7 +342,6 @@ def init_db():
 init_db()
 
 
-
 if __name__ == "__main__":
     # Only runs if dbmain.py is ran directly
     # Test insert
@@ -326,6 +351,7 @@ if __name__ == "__main__":
     chat_id = insert_or_update_chat("Hello", 1, chat_history_id, role_id)
 
     # Print table structure
+    cur = conn.cursor()
     cur.execute("SELECT name FROM sqlite_master WHERE type='table';")
     tables = cur.fetchall()
 
