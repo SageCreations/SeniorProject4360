@@ -25,7 +25,7 @@ class ImageInfo:
         return (f"ImageInfo(file_data={self.file_data}, type={self.file_type}, "
                 f"width={self.width}, height={self.height})")
     
-    
+
     
 #function to handle the byte data passed from the front end.
 def handle_image(file: ImageInfo) -> str:
@@ -35,7 +35,7 @@ def handle_image(file: ImageInfo) -> str:
       
     if current_os == "Windows":
         pytesseract.pytesseract.tesseract_cmd = 'OCR\\windows\\Tesseract-OCR\\tesseract.exe'
-        path_to_poppler_exe = Path('OCR\\poppler-24.08.0\\Library\\bin')
+        path_to_poppler_exe = 'OCR\\windows\\poppler-24.08.0\\Library\\bin'
     elif current_os == "Linux":
         pytesseract.pytesseract.tesseract_cmd = 'OCR/linux/tesseract/bin/tesseract'
         path_to_poppler_exe = 'OCR/linux/poppler/bin'
