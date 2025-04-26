@@ -1,7 +1,7 @@
 let file_list = [];
 let current_hist = -1; // -1 by default, backend will create new history if -1.
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     // DOM is loaded. Check if `webui` object is available
     if (typeof webui !== 'undefined') {
         // Set events callback
@@ -25,6 +25,13 @@ document.addEventListener('DOMContentLoaded', function() {
         // The virtual file `webui.js` is not included
         alert('Please add webui.js to your HTML.');
     }
+    const inputField = document.getElementById('chatInput');
+    inputField.addEventListener('keypress', function (event) {
+        if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault(); // Prevent adding a newline
+            handleQuery();          // Call existing send function
+        }
+    });
 });
 
 // TODO: probably need to convert this to a onclick="" call in the html and make a async function to
@@ -38,12 +45,12 @@ document.addEventListener('DOMContentLoaded', function() {
 // print(f"Decoded String: {decoded_string}")  # Output: Hello
 
 // Trigger file input when docBtn is clicked
-document.getElementById('docBtn').addEventListener('click', function() {
+document.getElementById('docBtn').addEventListener('click', function () {
     document.getElementById('fileInput').click();
 });
 
 // Handle file selection and update the UI
-document.getElementById('fileInput').addEventListener('change', function(e) {
+document.getElementById('fileInput').addEventListener('change', function (e) {
     const files = e.target.files;
     const preview = document.getElementById('filePreview');
     preview.innerHTML = ''; // Clear previous previews
@@ -55,8 +62,8 @@ document.getElementById('fileInput').addEventListener('change', function(e) {
             // add file to file_list for sending to the backend later
             const reader = new FileReader();
             reader.onload = function () {
-                const dataURL = reader.result; 
-                
+                const dataURL = reader.result;
+
                 if (file.type.startsWith('image/')) {
                     const img = new Image();
                     img.onload = function () {
@@ -68,8 +75,8 @@ document.getElementById('fileInput').addEventListener('change', function(e) {
                         file_list.push(augmentedData);
                     };
                     img.src = dataURL;
-                   
-                }else {
+
+                } else {
                     file_list.push(dataURL);
                 }
             };
@@ -78,7 +85,7 @@ document.getElementById('fileInput').addEventListener('change', function(e) {
             // Check file type and display appropriate preview
             if (file.type.startsWith('image/')) {
                 const preview_reader = new FileReader();
-                preview_reader.onload = function(event) {
+                preview_reader.onload = function (event) {
                     const img = document.createElement('img');
                     img.src = event.target.result;
                     img.classList.add('preview-img');
@@ -148,7 +155,7 @@ async function handleQuery() {
                 // add a button to sidebar
                 addSidebarButton(parseInt(parts[0], 10), resp)
             });
-            
+
         }
         current_hist = parseInt(parts[0], 10);
         console.log("history_id: ", current_hist);
@@ -171,53 +178,53 @@ async function handleQuery() {
 
 // Function to add a user message (left aligned)
 function addUserMessage(message, files) {
-  const chatBox = document.getElementById('chatBox');
-  const messageDiv = document.createElement('div');
-  messageDiv.classList.add('d-flex', 'justify-content-start', 'message');
+    const chatBox = document.getElementById('chatBox');
+    const messageDiv = document.createElement('div');
+    messageDiv.classList.add('d-flex', 'justify-content-start', 'message');
 
-  const bubble = document.createElement('div');
-  bubble.classList.add('bg-light', 'p-4', 'border', 'rounded', 'w-75');
-  bubble.textContent = message;
+    const bubble = document.createElement('div');
+    bubble.classList.add('bg-light', 'p-4', 'border', 'rounded', 'w-75');
+    bubble.textContent = message;
 
-  messageDiv.appendChild(bubble);
+    messageDiv.appendChild(bubble);
 
-  // Check if there are any files and add image previews as a footer in the message bubble
-  if (files && files.length > 0) {
-    const previewFooter = document.createElement('div');
-    // Add some spacing and make the previews display side-by-side
-    previewFooter.classList.add('mt-2', 'd-flex', 'flex-wrap', 'gap-2');
+    // Check if there are any files and add image previews as a footer in the message bubble
+    if (files && files.length > 0) {
+        const previewFooter = document.createElement('div');
+        // Add some spacing and make the previews display side-by-side
+        previewFooter.classList.add('mt-2', 'd-flex', 'flex-wrap', 'gap-2');
 
-    Array.from(files).forEach(file => {
-      if (file.type.startsWith('image/')) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-          const img = document.createElement('img');
-          img.src = e.target.result;
-          // Set fixed dimensions for the preview
-          img.style.maxWidth = '100px';
-          img.style.maxHeight = '100px';
-          img.classList.add('rounded', 'border');
-          previewFooter.appendChild(img);
-        };
-        reader.readAsDataURL(file);
-      } else if (file.type === 'application/pdf') {
-        // Create a PDF icon using inline SVG inside a styled container
-        const pdfContainer = document.createElement('div');
-        pdfContainer.classList.add('pdf-icon');
-        pdfContainer.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="currentColor" class="bi bi-filetype-pdf" viewBox="0 0 16 16">
+        Array.from(files).forEach(file => {
+            if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    // Set fixed dimensions for the preview
+                    img.style.maxWidth = '100px';
+                    img.style.maxHeight = '100px';
+                    img.classList.add('rounded', 'border');
+                    previewFooter.appendChild(img);
+                };
+                reader.readAsDataURL(file);
+            } else if (file.type === 'application/pdf') {
+                // Create a PDF icon using inline SVG inside a styled container
+                const pdfContainer = document.createElement('div');
+                pdfContainer.classList.add('pdf-icon');
+                pdfContainer.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="currentColor" class="bi bi-filetype-pdf" viewBox="0 0 16 16">
             <path fill-rule="evenodd" d="M14 4.5V14a2 2 0 0 1-2 2h-1v-1h1a1 1 0 0 0 1-1V4.5h-2A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v9H2V2a2 2 0 0 1 2-2h5.5zM1.6 11.85H0v3.999h.791v-1.342h.803q.43 0 .732-.173.305-.175.463-.474a1.4 1.4 0 0 0 .161-.677q0-.375-.158-.677a1.2 1.2 0 0 0-.46-.477q-.3-.18-.732-.179m.545 1.333a.8.8 0 0 1-.085.38.57.57 0 0 1-.238.241.8.8 0 0 1-.375.082H.788V12.48h.66q.327 0 .512.181.185.183.185.522m1.217-1.333v3.999h1.46q.602 0 .998-.237a1.45 1.45 0 0 0 .595-.689q.196-.45.196-1.084 0-.63-.196-1.075a1.43 1.43 0 0 0-.589-.68q-.396-.234-1.005-.234zm.791.645h.563q.371 0 .609.152a.9.9 0 0 1 .354.454q.118.302.118.753a2.3 2.3 0 0 1-.068.592 1.1 1.1 0 0 1-.196.422.8.8 0 0 1-.334.252 1.3 1.3 0 0 1-.483.082h-.563zm3.743 1.763v1.591h-.79V11.85h2.548v.653H7.896v1.117h1.606v.638z"/>
             </svg>`;
-        previewFooter.appendChild(pdfContainer);
-      }
-    });
+                previewFooter.appendChild(pdfContainer);
+            }
+        });
 
-    // Append the footer with image previews to the message bubble
-    bubble.appendChild(previewFooter);
-  }
+        // Append the footer with image previews to the message bubble
+        bubble.appendChild(previewFooter);
+    }
 
-  chatBox.appendChild(messageDiv);
-  // Scroll to the bottom of the chat
-  chatBox.scrollTop = chatBox.scrollHeight;
+    chatBox.appendChild(messageDiv);
+    // Scroll to the bottom of the chat
+    chatBox.scrollTop = chatBox.scrollHeight;
 }
 
 // Function to add a bot message (right aligned)
@@ -300,11 +307,11 @@ async function initSidebar() {
         sidebar.innerHTML = "";
         webui.getChats().then(resp => {
             let obj = JSON.parse(resp);
-            
+
             for (const key in obj) {
                 if (obj.hasOwnProperty(key)) {
-                  const title = obj[key].title;
-                  addSidebarButton(key, title);
+                    const title = obj[key].title;
+                    addSidebarButton(key, title);
                 }
             }
         });
@@ -322,7 +329,7 @@ function addSidebarButton(hist_id, text) {
         console.error("Sidebar container element with id 'sidebarContainer' not found.");
         return;
     }
-    
+
     // Create a container div that stretches its children.
     const buttonContainer = document.createElement("div");
     buttonContainer.className = "d-flex align-items-stretch my-2"; // Use align-items-stretch for uniform height
@@ -334,7 +341,7 @@ function addSidebarButton(hist_id, text) {
     mainButton.className = "btn btn-secondary flex-grow-1 rounded-0"; // Flex-grow to take all available space
     mainButton.setAttribute('data-bs-dismiss', "offcanvas");
     mainButton.textContent = text;
-    mainButton.addEventListener("click", function() {
+    mainButton.addEventListener("click", function () {
         console.log("Sidebar button clicked:", text);
         document.getElementById('chatTitle').innerText = text;
         updateChatWindow(hist_id);
@@ -349,7 +356,7 @@ function addSidebarButton(hist_id, text) {
     deleteButton.textContent = "X";
     // Apply a left margin to push it to the right.
     deleteButton.style.marginLeft = "auto";
-    deleteButton.addEventListener("click", function() {
+    deleteButton.addEventListener("click", function () {
         // When the delete button is clicked, update the chat if this entry is currently active.
         if (current_hist === hist_id) {
             current_hist = -1;
@@ -378,25 +385,25 @@ function addSidebarButton(hist_id, text) {
 function dataURLtoFile(dataURL) {
     // Split the data URL at the comma
     const arr = dataURL.split(',');
-    
+
     // Extract the MIME type using a regular expression
     const mimeMatch = arr[0].match(/:(.*?);/);
     if (!mimeMatch) {
-      throw new Error('Invalid data URL.');
+        throw new Error('Invalid data URL.');
     }
     const mime = mimeMatch[1];
-    
+
     // Decode base64 encoded string
     const bstr = atob(arr[1]);
-    
+
     // Create an array of bytes
     let n = bstr.length;
     const u8arr = new Uint8Array(n);
-    
+
     while (n--) {
-      u8arr[n] = bstr.charCodeAt(n);
+        u8arr[n] = bstr.charCodeAt(n);
     }
-    
+
     // Construct a File object with the name, data, and MIME type
     return new File([u8arr], "file", { type: mime });
 }
@@ -414,7 +421,7 @@ async function updateChatWindow(hist_id) {
             let chats = JSON.parse(mesgResp);
             message_order = [];
             let doc_list = [];
-            
+
             // field_names=['message', "order_number", "history_id", "role_id"]
             for (const key in chats) {
                 if (chats.hasOwnProperty(key)) {
@@ -423,13 +430,13 @@ async function updateChatWindow(hist_id) {
                     const history_id = chats[key].history_id;
                     const role_id = chats[key].role_id;
                     message_order.push({ key, chat_message, order_number, history_id, role_id });
-                    
+
                     // //TODO: idk what todo with this yet
                     if (role_id === 1) {
                         // field_names=["history_id", "message", "role_id"]
                         webui.getDocs(key).then(docResp => {
                             url_list = docResp.split('|');
-                            
+
                             Array.from(url_list).forEach(url => {
                                 doc_list.push(dataURLtoFile(url));
                             });
@@ -437,11 +444,11 @@ async function updateChatWindow(hist_id) {
                     }
                 }
             }
-            
+
             // ensures chat message order
             message_order.sort((a, b) => a.key - b.key);
             console.log(message_order);
-            
+
             message_order.forEach(item => {
                 switch (item.role_id) {
                     case 1:
@@ -456,7 +463,7 @@ async function updateChatWindow(hist_id) {
                 }
             });
         });
-        
-        
+
+
     }
 }

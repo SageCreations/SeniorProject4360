@@ -10,173 +10,124 @@ import OCR.ocr as ocr
 co = cohere.ClientV2(api_key="baEFHZHrRfmJQFaKNwCRIUpQODvAi5OW272d2God")
 
 
-# Utility Functions ===========================================================
-def convert_tuples_to_json(data, key_index=0, field_names=None):
-    result = {}
+# Chat Functions ==============================================================
+def generate_title_from_message(user_msg: str) -> str:
+    """
+    Create a short title based on the user's message.
+    """
+    system_message = (
+        "Give a 1 to 5 word title based off of the user's message. "
+        "Do not say anything else besides the title. "
+        "If the user's message is empty, make a title up."
+    )
 
-    for tup in data:
-        # Extract the key using key_index
-        key = tup[key_index]
-        # Collect all other values (all indices except key_index)
-        values = [v for i, v in enumerate(tup) if i != key_index]
-
-        if field_names:
-            if len(field_names) != len(values):
-                raise ValueError(
-                    f"Field names length ({len(field_names)}) does not match number "
-                    f"of tuple values ({len(values)}) for tuple {tup}"
-                )
-            # Create a dictionary mapping field names to values
-            result[key] = dict(zip(field_names, values))
-        else:
-            # Keep the values as a list if no field names provided
-            result[key] = values
-
-    # Serialize the dictionary into a JSON string
-    return json.dumps(result)
-
-
-# =============================================================================
-
-# Chat Request functions ======================================================
-
-
-# create a history title for the database
-def create_title(user_msg: str) -> str:
-    # Define a system message
-    system_message = "Give a 1 to 5 word title based off of the user's message. Do not say anything else besides the title. If the user's message is empty then just make a title up."
-
-    # Start with the system message
-    messages = [{"role": "system", "content": system_message}]
-    if user_msg == "":
+    if not user_msg:
         user_msg = " "
-    messages.append({"role": "user", "content": user_msg})
+
+    messages = [
+        {"role": "system", "content": system_message},
+        {"role": "user", "content": user_msg},
+    ]
 
     res = co.chat(model="command-r-plus-08-2024", messages=messages)
     return res.message.content[0].text
 
 
-# handle the chat message for the user
-def handle_text(hist_id: int) -> str:
-    # Define a system message
-    system_message = ""
-
-    # Start with the system message
-    messages = [{"role": "system", "content": system_message}]
-
+def generate_response_for_history(hist_id: int) -> str:
+    """
+    Generate a chat response based on the existing chat history and documents.
+    """
+    messages = [{"role": "system", "content": ""}]
     chat_log = db.get_chats_by_history(hist_id)
-    # print(chat_log)
 
     for chat in chat_log:
-        mesg = chat["message"]
-        role_id = chat["role"]
-        if mesg != "":
-            if role_id == 1:
-                messages.append({"role": "user", "content": mesg})
-            else:
-                messages.append({"role": "assistant", "content": mesg})
+        role = "user" if chat["role"] == 1 else "assistant"
+        if chat["message"]:
+            messages.append({"role": role, "content": chat["message"]})
 
-    # get doc messages only
-    docs: list[str] = db.get_docs_by_history(hist_id)
-    print(docs)
+    documents: list[str] = db.get_docs_by_history(hist_id)
+
     res = co.chat(
         model="command-r-plus-08-2024",
         messages=messages,
-        documents=docs,
+        documents=documents,
     )
 
-    # add bot message to db
-    db.insert_or_update_chat(
+    db.insert_chat(
         message=res.message.content[0].text,
         order_number=1,
-        chat_history_id=hist_id,
+        hist_id=hist_id,
         role=2,
     )
 
     return res.message.content[0].text
 
 
-def handle_docs(hist_id: int, chat_id: int, file_list: list[str]):
+def save_uploaded_docs(hist_id: int, chat_id: int, file_list: list[str]):
+    """
+    Process and save uploaded document files to the database.
+    """
     for file in file_list:
         parts = file.split(",")
-        data_url = parts[0] + "," + parts[1]
-        metadata = parts[0]
-        base64_data = parts[1]
-        file_type = metadata.split(";")[0].split(":")[1]
+        data_url, base64_data = parts[0], parts[1]
+        file_type = data_url.split(";")[0].split(":")[1]
 
-        # print(file_type)
-        if file_type == "application/pdf":
-            width: int = 612
-            height: int = 792
-        else:
-            width: int = int(parts[2])
-            height: int = int(parts[3])
+        width = int(parts[2]) if len(parts) > 2 else 612
+        height = int(parts[3]) if len(parts) > 3 else 792
 
-        decoded_string = base64.b64decode(base64_data)
+        decoded_data = base64.b64decode(base64_data)
         img = ocr.ImageInfo(
-            file_data=decoded_string, file_type=file_type, height=height, width=width
+            file_data=decoded_data, file_type=file_type, height=height, width=width
         )
         doc_message: str = ocr.handle_image(img)
-        print("mesg: ", doc_message)
 
-        db.create_doc(data_url, doc_message, hist_id, chat_id)
+        db.insert_doc(data_url, doc_message, hist_id, chat_id)
 
 
-def handle_chat(e: ui.Event):
+def handle_chat_event(e: ui.Event):
+    """
+    Handle incoming chat event (message + files) from UI.
+    """
     hist_id = e.get_int_at(0)
-    user_str = e.get_string_at(1)
-    user_files_str = e.get_string_at(2)
+    user_msg = e.get_string_at(1)
+    user_files = e.get_string_at(2)
 
-    file_list = user_files_str.split("|")
-    # print(file_list)
-    # Create new history if -1
+    file_list = user_files.split("|") if user_files else []
+
     if hist_id == -1:
         hist_id = db.insert_chat_history()
-        db.update_chat_history(hist_id, create_title(user_str))
+        db.update_chat_history(hist_id, generate_title_from_message(user_msg))
 
-    # add user message to db
-    chat_id = db.insert_or_update_chat(
-        message=user_str, order_number=1, chat_history_id=hist_id, role=1
-    )
+    chat_id = db.insert_chat(message=user_msg, order_number=1, hist_id=hist_id, role=1)
 
-    if file_list != [""]:
-        handle_docs(hist_id, chat_id, file_list)
+    if file_list and file_list != [""]:
+        save_uploaded_docs(hist_id, chat_id, file_list)
 
-    resp = f"{hist_id}|{handle_text(hist_id)}"
-    e.return_string(resp)
+    response = f"{hist_id}|{generate_response_for_history(hist_id)}"
+    e.return_string(response)
 
 
-# middle man api for database backend for frontend use.
-# =============================================================================
-def get_histories(e: ui.Event):
-    hist_logs = db.get_chat_histories()  # [{'id': 1, 'title': 'X'}, ...]
-
-    # Convert to { id: { 'title': title }, ... }
+# Database API Handlers for Frontend ===========================================
+def get_chat_histories_event(e: ui.Event):
+    hist_logs = db.get_chat_histories()
     result = {hist["id"]: {"title": hist["title"] or "Untitled"} for hist in hist_logs}
-
-    json_str = json.dumps(result)
-    e.return_string(json_str)
+    e.return_string(json.dumps(result))
 
 
-def get_title(e: ui.Event):
+def get_title_for_history(e: ui.Event):
     hist_id = e.get_int_at(0)
-    resp = db.get_chat_history(hist_id)
-    if resp is None:
-        resp = "No Title"
-    else:
-        resp = resp["title"]
-    e.return_string(resp)
+    history = db.get_chat_history(hist_id)
+    e.return_string(history["title"] if history else "No Title")
 
 
-def delete_history(e: ui.Event):
+def delete_history_event(e: ui.Event):
     hist_id = e.get_int_at(0)
     db.delete_chat_history(hist_id)
-    db.delete_chat_by_history(hist_id)
+    db.delete_chats_by_history(hist_id)
 
 
-def get_chats_from_hist(e: ui.Event):
+def get_messages_for_history(e: ui.Event):
     hist_id = e.get_int_at(0)
-
     chat_logs = db.get_chats_by_history(hist_id)
 
     chat_data = {
@@ -188,38 +139,33 @@ def get_chats_from_hist(e: ui.Event):
         }
         for chat in chat_logs
     }
-    json_str = json.dumps(chat_data)
 
-    e.return_string(json_str)
+    e.return_string(json.dumps(chat_data))
 
 
-def get_docs_for_chat_message(e: ui.Event):
+def get_documents_for_chat(e: ui.Event):
     chat_id = e.get_int_at(0)
-    doc_logs = db.get_docs_by_chat_id(chat_id)  # get data_urls from docs
-    e.return_string("|".join(doc_logs))
+    doc_urls = db.get_docs_by_chat_id(chat_id)
+    e.return_string("|".join(doc_urls))
 
 
 # =============================================================================
 
 
 def main():
-    # if os.path.exists(db.DB_PATH):
-    #     print(f"'db' exists.")
-    # else:
-    #     print(f"'db' does not exist.")
-
     my_window = ui.Window()
 
-    # TODO: switch these out when building an executable
+    # NOTE: Switch these paths when building executable
     my_window.set_root_folder("views")
     # my_window.set_root_folder("_internal/views")
 
-    my_window.bind("handleChat", handle_chat)
-    my_window.bind("getChats", get_histories)
-    my_window.bind("getMessages", get_chats_from_hist)
-    my_window.bind("getDocs", get_docs_for_chat_message)
-    my_window.bind("removeHistory", delete_history)
-    my_window.bind("getTitle", get_title)
+    # Bind UI events
+    my_window.bind("handleChat", handle_chat_event)
+    my_window.bind("getChats", get_chat_histories_event)
+    my_window.bind("getMessages", get_messages_for_history)
+    my_window.bind("getDocs", get_documents_for_chat)
+    my_window.bind("removeHistory", delete_history_event)
+    my_window.bind("getTitle", get_title_for_history)
 
     my_window.show_browser("index.html", my_window.get_best_browser())
     ui.wait()
