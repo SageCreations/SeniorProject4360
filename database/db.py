@@ -25,25 +25,35 @@ def insert_chat_history():
 
 
 # Function to get chat histories
-def get_chat_histories():
+def get_chat_histories() -> list[dict[str, str | int | None]]:
+    """
+    Returns a list of chat histories with their id and title.
+    """
     cur = conn.cursor()
     try:
-        cur.execute("SELECT * FROM chat_history;")
+        cur.execute("SELECT id, title FROM chat_history;")
+        rows = cur.fetchall()
     finally:
-        resp = cur.fetchall()
         cur.close()
-    return resp
+
+    return [{"id": row[0], "title": row[1]} for row in rows]
 
 
 # get a singular chat history back, use to get title
-def get_chat_history(hist_id):
+def get_chat_history(hist_id: int) -> dict[str, str | int] | None:
+    """
+    Returns a single chat history by id.
+    """
     cur = conn.cursor()
     try:
         cur.execute("SELECT id, title FROM chat_history WHERE id = ?;", (hist_id,))
+        row = cur.fetchone()
     finally:
-        resp = cur.fetchone()
         cur.close()
-    return resp
+
+    if row:
+        return {"id": row[0], "title": row[1]}
+    return None
 
 
 # Function to update chat history title
@@ -91,14 +101,30 @@ def insert_or_update_chat(message, order_number, chat_history_id, role) -> int:
 
 
 # Function to get all chat messages for given chat history
-def get_chats_by_history(chat_history_id):
+def get_chats_by_history(chat_history_id: int) -> list[dict[str, str | int]]:
+    """
+    Returns all chats for a given chat_history_id.
+    """
     cur = conn.cursor()
     try:
-        cur.execute("SELECT * FROM chat WHERE chat_history_id = ?;", (chat_history_id,))
+        cur.execute(
+            "SELECT id, message, order_number, chat_history_id, role FROM chat WHERE chat_history_id = ?;",
+            (chat_history_id,),
+        )
+        rows = cur.fetchall()
     finally:
-        resp = cur.fetchall()
         cur.close()
-    return resp
+
+    return [
+        {
+            "id": row[0],
+            "message": row[1],
+            "order_number": row[2],
+            "chat_history_id": row[3],
+            "role": row[4],
+        }
+        for row in rows
+    ]
 
 
 # Function to update a chat message
@@ -145,10 +171,16 @@ def insert_role(role_name):
 
 
 # Function to get roles
-def get_roles():
+def get_roles() -> list[dict[str, str | int]]:
+    """
+    Returns all roles with id and role_name.
+    """
     cur = conn.cursor()
-    cur.execute("SELECT * FROM role;")
-    return cur.fetchall()
+    cur.execute("SELECT id, role_name FROM role;")
+    rows = cur.fetchall()
+    cur.close()
+
+    return [{"id": row[0], "role_name": row[1]} for row in rows]
 
 
 # Function to update role name

@@ -67,7 +67,9 @@ def handle_text(hist_id: int) -> str:
     chat_log = db.get_chats_by_history(hist_id)
     # print(chat_log)
 
-    for rowid, mesg, ord_num, hist_id, role_id in chat_log:
+    for chat in chat_log:
+        mesg = chat["message"]
+        role_id = chat["role"]
         if mesg != "":
             if role_id == 1:
                 messages.append({"role": "user", "content": mesg})
@@ -147,20 +149,22 @@ def handle_chat(e: ui.Event):
 # middle man api for database backend for frontend use.
 # =============================================================================
 def get_histories(e: ui.Event):
-    hist_logs = db.get_chat_histories()
-    # print(hist_logs)
-    json_str = convert_tuples_to_json(hist_logs, key_index=0, field_names=["title"])
+    hist_logs = db.get_chat_histories()  # [{'id': 1, 'title': 'X'}, ...]
 
+    # Convert to { id: { 'title': title }, ... }
+    result = {hist["id"]: {"title": hist["title"] or "Untitled"} for hist in hist_logs}
+
+    json_str = json.dumps(result)
     e.return_string(json_str)
 
 
 def get_title(e: ui.Event):
     hist_id = e.get_int_at(0)
     resp = db.get_chat_history(hist_id)
-    if resp == None:
+    if resp is None:
         resp = "No Title"
     else:
-        resp = resp[1]
+        resp = resp["title"]
     e.return_string(resp)
 
 
@@ -175,11 +179,17 @@ def get_chats_from_hist(e: ui.Event):
 
     chat_logs = db.get_chats_by_history(hist_id)
 
-    json_str = convert_tuples_to_json(
-        chat_logs,
-        key_index=0,
-        field_names=["message", "order_number", "history_id", "role_id"],
-    )
+    chat_data = {
+        chat["id"]: {
+            "message": chat["message"],
+            "order_number": chat["order_number"],
+            "history_id": chat["chat_history_id"],
+            "role_id": chat["role"],
+        }
+        for chat in chat_logs
+    }
+    json_str = json.dumps(chat_data)
+
     e.return_string(json_str)
 
 
