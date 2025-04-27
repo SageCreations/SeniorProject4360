@@ -7,7 +7,8 @@ import cohere
 import database.db as db
 import OCR.ocr as ocr
 
-co = cohere.ClientV2(api_key="baEFHZHrRfmJQFaKNwCRIUpQODvAi5OW272d2God")
+# API KEY for testing
+# baEFHZHrRfmJQFaKNwCRIUpQODvAi5OW272d2God
 
 
 # Chat Functions ==============================================================
@@ -28,9 +29,14 @@ def generate_title_from_message(user_msg: str) -> str:
         {"role": "system", "content": system_message},
         {"role": "user", "content": user_msg},
     ]
-
-    res = co.chat(model="command-r-plus-08-2024", messages=messages)
-    return res.message.content[0].text
+    
+    resp = db.get_cohere_key()
+    if resp is not None:
+        co = cohere.ClientV2(api_key=resp)
+        res = co.chat(model="command-r-plus-08-2024", messages=messages)
+        return res.message.content[0].text
+    
+    return "Error"
 
 
 def generate_response_for_history(hist_id: int) -> str:
@@ -47,20 +53,23 @@ def generate_response_for_history(hist_id: int) -> str:
 
     documents: list[str] = db.get_docs_by_history(hist_id)
 
-    res = co.chat(
-        model="command-r-plus-08-2024",
-        messages=messages,
-        documents=documents,
-    )
+    resp = db.get_cohere_key()
+    if resp is not None:
+        co = cohere.ClientV2(api_key=resp)
+        res = co.chat(
+            model="command-r-plus-08-2024",
+            messages=messages,
+            documents=documents,
+        )
+        db.insert_chat(
+            message=res.message.content[0].text,
+            order_number=1,
+            hist_id=hist_id,
+            role=2,
+        )
+        return res.message.content[0].text
 
-    db.insert_chat(
-        message=res.message.content[0].text,
-        order_number=1,
-        hist_id=hist_id,
-        role=2,
-    )
-
-    return res.message.content[0].text
+    return "Error: You have not set up your API KEY yet."
 
 
 def save_uploaded_docs(hist_id: int, chat_id: int, file_list: list[str]):
@@ -149,6 +158,21 @@ def get_documents_for_chat(e: ui.Event):
     e.return_string("|".join(doc_urls))
 
 
+def update_api_key(e: ui.Event):
+    api_key = e.get_string_at(0)
+    print(api_key)
+    db.update_cohere_key(api_key)
+
+
+def get_api_key(e: ui.Event):
+    resp = db.get_cohere_key()
+    if resp is None:
+        e.return_string("")
+    else:
+        e.return_string(resp)
+    print(resp)
+
+
 # =============================================================================
 
 
@@ -160,12 +184,14 @@ def main():
     # my_window.set_root_folder("_internal/views")
 
     # Bind UI events
-    my_window.bind("handleChat", handle_chat_event)
-    my_window.bind("getChats", get_chat_histories_event)
-    my_window.bind("getMessages", get_messages_for_history)
-    my_window.bind("getDocs", get_documents_for_chat)
+    my_window.bind("handleChat",    handle_chat_event)
+    my_window.bind("getChats",      get_chat_histories_event)
+    my_window.bind("getMessages",   get_messages_for_history)
+    my_window.bind("getDocs",       get_documents_for_chat)
     my_window.bind("removeHistory", delete_history_event)
-    my_window.bind("getTitle", get_title_for_history)
+    my_window.bind("getTitle",      get_title_for_history)
+    my_window.bind("updateKey",     update_api_key)
+    my_window.bind("getKey",        get_api_key)
 
     my_window.show_browser("index.html", my_window.get_best_browser())
     ui.wait()

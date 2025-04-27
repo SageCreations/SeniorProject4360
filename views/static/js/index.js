@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 console.log('Connected.');
                 current_hist = -1;
                 initSidebar();
+                getAPIKey();
 
 
             } else if (e == webui.event.DISCONNECTED) {
@@ -467,4 +468,39 @@ async function updateChatWindow(hist_id) {
 
 
     }
+}
+
+
+
+
+
+// API KEY STUFF ==============================================================
+/**
+ * Submits the API key by retrieving the value from the input field
+ * and passing it to the `webui.updateKey` function.
+ * 
+ * @returns {void}
+ */
+function submitAPIKey() {
+    // Get the value of the API key input field
+    var apiKey = document.getElementById('apiKeyInput').value;
+    
+    // Update the key using the webui update function
+    webui.updateKey(apiKey);
+}
+
+/**
+ * Retrieves the stored API key and sets it as the value of the input field.
+ * The API key is fetched asynchronously from the webui.getKey function.
+ * 
+ * @returns {Promise<void>} Resolves when the API key is successfully retrieved
+ */
+async function getAPIKey() {
+    // Fetch the stored API key and set it to the input field
+    webui.getKey().then(resp => {
+        // Set the retrieved API key to the input field
+        document.getElementById('apiKeyInput').value = resp;
+    }).catch(error => {
+        console.error('Error fetching API Key:', error);
+    });
 }
