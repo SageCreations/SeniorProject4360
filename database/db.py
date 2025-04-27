@@ -1,63 +1,6 @@
 import sqlite3
 import os
 
-# Globals =====================================================================
-DB_PATH = os.path.join(os.path.dirname(__file__), "chatbot.db")
-conn = sqlite3.connect(DB_PATH, check_same_thread=False)
-
-# DB Initialization ===========================================================
-def init_db():
-    cur = conn.cursor()
-    try:
-        cur.executescript(
-            """
-            CREATE TABLE IF NOT EXISTS role (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                role_name TEXT UNIQUE NOT NULL
-            );
-
-            CREATE TABLE IF NOT EXISTS chat_history (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                title TEXT
-            );
-
-            CREATE TABLE IF NOT EXISTS docs (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                data_url TEXT,
-                message TEXT,
-                chat_history_id INTEGER,
-                chat_id INTEGER,
-                FOREIGN KEY (chat_history_id) REFERENCES chat_history(id) ON DELETE CASCADE,
-                FOREIGN KEY (chat_id) REFERENCES chat(id)
-            );
-
-            CREATE TABLE IF NOT EXISTS chat (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                message TEXT NOT NULL,
-                order_number INTEGER NOT NULL,
-                chat_history_id INTEGER NOT NULL,
-                role INTEGER NOT NULL,
-                FOREIGN KEY (chat_history_id) REFERENCES chat_history(id) ON DELETE CASCADE,
-                FOREIGN KEY (role) REFERENCES role(id) ON DELETE CASCADE
-            );
-
-            CREATE TABLE IF NOT EXISTS cohere_key (
-                key TEXT
-            );
-        """
-        )
-        conn.commit()
-    finally:
-        cur.close()
-
-    user_role = insert_role("user")
-    assist_role = insert_role("assistant")
-
-
-# check to see if DB file exists or not
-if not os.path.exists(DB_PATH):
-    init_db()  # Run the initialization function if the file does not exist
-
 
 # Chat History Functions ======================================================
 def insert_chat_history() -> int:
@@ -315,7 +258,77 @@ def update_cohere_key(new_key: str) -> None:
     cur = conn.cursor()
     try:
         cur.execute("DELETE FROM cohere_key;")
-        cur.execute("INSERT INTO cohere_key (api_key) VALUES (?);", (new_key,))
+        cur.execute("INSERT INTO cohere_key (key) VALUES (?);", (new_key,))
         conn.commit()
     finally:
         cur.close()
+
+
+def get_cohere_key() -> str | None:
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT key FROM cohere_key LIMIT 1")
+        resp = cur.fetchone()
+    finally:
+        cur.close()
+    
+    if resp is None:
+        return None
+
+    return resp[0]
+
+
+# DB Initialization ===========================================================
+def init_db():
+    cur = conn.cursor()
+    try:
+        cur.executescript(
+            """
+            CREATE TABLE IF NOT EXISTS role (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                role_name TEXT UNIQUE NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS chat_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT
+            );
+
+            CREATE TABLE IF NOT EXISTS docs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                data_url TEXT,
+                message TEXT,
+                chat_history_id INTEGER,
+                chat_id INTEGER,
+                FOREIGN KEY (chat_history_id) REFERENCES chat_history(id) ON DELETE CASCADE,
+                FOREIGN KEY (chat_id) REFERENCES chat(id)
+            );
+
+            CREATE TABLE IF NOT EXISTS chat (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                message TEXT NOT NULL,
+                order_number INTEGER NOT NULL,
+                chat_history_id INTEGER NOT NULL,
+                role INTEGER NOT NULL,
+                FOREIGN KEY (chat_history_id) REFERENCES chat_history(id) ON DELETE CASCADE,
+                FOREIGN KEY (role) REFERENCES role(id) ON DELETE CASCADE
+            );
+
+            CREATE TABLE IF NOT EXISTS cohere_key (
+                key TEXT
+            );
+        """
+        )
+        conn.commit()
+    finally:
+        cur.close()
+
+    user_role = insert_role("user")
+    assist_role = insert_role("assistant")
+
+
+# Globals =====================================================================
+DB_PATH = os.path.join(os.path.dirname(__file__), "chatbot.db")
+conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+init_db()
+
