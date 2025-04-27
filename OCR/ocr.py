@@ -36,16 +36,14 @@ def handle_image(file: ImageInfo) -> str:
     document_data: list[str] = []
 
     if current_os == "Windows":
-        pytesseract.pytesseract.tesseract_cmd = (
-            "OCR\\windows\\Tesseract-OCR\\tesseract.exe"
-        )
-        path_to_poppler_exe = Path("OCR\\poppler-24.08.0\\Library\\bin")
+        pytesseract.pytesseract.tesseract_cmd = 'OCR\\windows\\Tesseract-OCR\\tesseract.exe'
+        path_to_poppler_exe = 'OCR\\windows\\poppler-24.08.0\\Library\\bin'
     elif current_os == "Linux":
-        pytesseract.pytesseract.tesseract_cmd = "OCR/linux/tesseract/bin/tesseract"
-        path_to_poppler_exe = "OCR/linux/poppler/bin"
+        pytesseract.pytesseract.tesseract_cmd = 'OCR/linux/tesseract/bin/tesseract'
+        path_to_poppler_exe = 'OCR/linux/poppler/bin'
     elif current_os == "Darwin":  # macOS returns 'Darwin'
-        pytesseract.pytesseract.tesseract_cmd = "OCR/darwin/tesseract/bin/tesseract"
-        path_to_poppler_exe = "OCR/darwin/poppler/bin"
+        pytesseract.pytesseract.tesseract_cmd = 'OCR/darwin/tesseract/bin/tesseract'
+        path_to_poppler_exe = 'OCR/darwin/poppler/bin'
     else:
         raise Exception("Unsupported OS")
 
