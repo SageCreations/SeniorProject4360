@@ -434,13 +434,14 @@ async function updateChatWindow(hist_id) {
                     // //TODO: idk what todo with this yet
                     if (role_id === 1) {
                         // field_names=["history_id", "message", "role_id"]
-                        webui.getDocs(key).then(docResp => {
-                            url_list = docResp.split('|');
+                        // TODO: currently commented out because it causes a crash on the DB fetch function in db.py
+                        // webui.getDocs(key).then(docResp => {
+                        //     url_list = docResp.split('|');
 
-                            Array.from(url_list).forEach(url => {
-                                doc_list.push(dataURLtoFile(url));
-                            });
-                        });
+                        //     Array.from(url_list).forEach(url => {
+                        //         doc_list.push(dataURLtoFile(url));
+                        //     });
+                        // });
                     }
                 }
             }
