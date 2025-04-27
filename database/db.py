@@ -1,266 +1,11 @@
 import sqlite3
 import os
 
-# Filename for database "chatbot.db"
 # Globals =====================================================================
 DB_PATH = os.path.join(os.path.dirname(__file__), "chatbot.db")
 conn = sqlite3.connect(DB_PATH, check_same_thread=False)
 
-
-# chat_history functions ======================================================
-
-
-# Funciton to insert chat history
-def insert_chat_history():
-    cur = conn.cursor()
-    try:
-        cur.execute(
-            "INSERT INTO chat_history (title) VALUES (NULL);",
-        )
-        conn.commit()
-    finally:
-        resp = cur.lastrowid
-        cur.close()
-    return resp
-
-
-# Function to get chat histories
-def get_chat_histories():
-    cur = conn.cursor()
-    try:
-        cur.execute("SELECT * FROM chat_history;")
-    finally:
-        resp = cur.fetchall()
-        cur.close()
-    return resp
-
-
-# get a singular chat history back, use to get title
-def get_chat_history(hist_id):
-    cur = conn.cursor()
-    try:
-        cur.execute("SELECT id, title FROM chat_history WHERE id = ?;", (hist_id,))
-    finally:
-        resp = cur.fetchone()
-        cur.close()
-    return resp
-
-
-# Function to update chat history title
-def update_chat_history(chat_history_id, new_title):
-    cur = conn.cursor()
-    try:
-        cur.execute(
-            "UPDATE chat_history SET title = ? WHERE id = ?;", (new_title, chat_history_id)
-        )
-        conn.commit()
-    finally:
-        cur.close()
-
-
-# Function to delete chat history by ID (will also delete related chat and docs due to CASCADE)
-def delete_chat_history(chat_history_id):
-    cur = conn.cursor()
-    try:
-        cur.execute("DELETE FROM chat_history WHERE id = ?;", (chat_history_id,))
-        conn.commit()
-    finally:
-        cur.close()
-
-
-
-# chat functions ==============================================================
-
-
-# Function to insert chat message
-def insert_or_update_chat(message, order_number, chat_history_id, role) -> int:
-    cur = conn.cursor()
-    try:
-        cur.execute(
-            """
-            INSERT INTO chat (message, order_number, chat_history_id, role)
-            VALUES (?, ?, ?, ?);
-        """,
-            (message, order_number, chat_history_id, role),
-        )
-        conn.commit()
-    finally:
-        resp = int(cur.lastrowid)
-        cur.close()
-    return resp
-
-
-# Function to get all chat messages for given chat history
-def get_chats_by_history(chat_history_id):
-    cur = conn.cursor()
-    try:
-        cur.execute("SELECT * FROM chat WHERE chat_history_id = ?;", (chat_history_id,))
-    finally:
-        resp = cur.fetchall()
-        cur.close()
-    return resp
-
-
-# Function to update a chat message
-def update_chat(chat_id, new_message):
-    cur.execute("UPDATE chat SET message = ? WHERE id = ?;", (new_message, chat_id))
-    conn.commit()
-    return chat_id
-
-
-# Function to delete a chat message by ID
-def delete_chat(chat_id):
-    cur.execute("DELETE FROM chat WHERE id = ?;", (chat_id,))
-    conn.commit()
-    return chat_id
-
-
-# role functions ==============================================================
-
-
-# Function to insert role if it doesn't exist
-def insert_role(role_name):
-    cur = conn.cursor()
-    try:
-        cur.execute("INSERT OR IGNORE INTO role (role_name) VALUES (?);", (role_name,))
-        conn.commit()
-        cur.execute("SELECT id FROM role WHERE role_name = ?;", (role_name,))
-    finally:
-        result = cur.fetchone()
-        cur.close()
-    return result[0] if result else None
-
-
-# Function to get roles
-def get_roles():
-    cur.execute("SELECT * FROM role;")
-    return cur.fetchall()
-
-
-# Function to update role name
-def update_role(role_id, new_role_name):
-    cur.execute("UPDATE role SET role_name = ? WHERE id = ?;", (new_role_name, role_id))
-    conn.commit()
-    return role_id
-
-
-# Function to delete a role by ID
-def delete_role(role_id):
-    cur.execute("DELETE FROM role WHERE id = ?;", (role_id,))
-    conn.commit()
-    return role_id
-
-
-# doc functions ===============================================================
-
-
-# function to insert new doc into table
-def create_doc(data_url, message, hist_id, chat_id):
-    """
-    Insert a new document into the docs table.
-    
-    Returns the id of the newly created record.
-    """
-    cur = conn.cursor()
-    try:
-        cur.execute('''
-            INSERT INTO docs (data_url, message, chat_history_id, chat_id)
-            VALUES (?, ?, ?, ?)
-        ''', (data_url, message, hist_id, chat_id))
-        conn.commit()
-    finally:
-        resp = cur.lastrowid
-        cur.close()
-    return resp
-
-def get_docs_by_history(chat_history_id) -> list[str]:
-    """
-    Retrieve messages and data_urls from the docs table for all records matching the given chat_history_id.
-    
-    Returns:
-        The list holds the messages (list[str])
-         
-    """
-    cur = conn.cursor()
-    try:
-        # Execute the SQL query to select message and data_url where chat_history_id matches.
-        cur.execute("SELECT message FROM docs WHERE chat_history_id = ?", (chat_history_id,))
-    finally:    
-        rows = cur.fetchall()
-        # Separate the columns into two lists.
-        messages = [row[0] for row in rows]
-        cur.close()
-
-    # Return a list containing both lists to preserve the ordering.
-    return messages
-
-
-def get_docs_by_chat_id(chat_id) -> list[str]:
-    """
-    Retrieve messages and data_urls from the docs table for all records matching the given chat_history_id.
-    
-    Returns:
-        The list holds the data_urls (list[str])
-    """
-    # Execute the SQL query to select message and data_url where chat_history_id matches.
-    cur = conn.cursor()
-    try:
-        cur.execute("SELECT data_url FROM docs WHERE chat_id = ?", (chat_id,))
-    finally:
-        rows = cur.fetchall()
-        #print(rows)
-        # Separate the columns into two lists.
-        data_urls = [row[0] for row in rows]
-        #print(data_urls)
-        cur.close()
-        
-    # Return a list containing both lists to preserve the ordering.
-    return data_urls
-
-
-# Function to update a document message
-def update_doc(doc_id, new_message):
-    cur.execute("UPDATE docs SET message = ? WHERE id = ?;", (new_message, doc_id))
-    conn.commit()
-    return doc_id
-
-
-def delete_docs_by_chat_id(hist_id):
-    """
-    Delete all records from the docs table that match the given chat_id.
-    """
-    cur.execute("DELETE FROM docs WHERE chat_history_id = ?", (hist_id,))
-    conn.commit()
-
-
-# cohere_key functions ========================================================
-
-
-def update_cohere_key(new_key):
-    """
-    Update the cohere_key table by deleting any existing entries
-    and inserting the new key value. Only one entry exists at any time.
-    """
-    # Remove any existing entries
-    cur.execute("DELETE FROM cohere_key")
-    # Insert the new key value
-    cur.execute("INSERT INTO cohere_key (key) VALUES (?)", (new_key,))
-    conn.commit()
-
-
-def get_cohere_key() -> str:
-    """
-    Retrieve the current key value from the cohere_key table.
-    Returns the key as a string if available, otherwise returns None.
-    """
-    cur.execute("SELECT key FROM cohere_key LIMIT 1")
-    row = cursor.fetchone()
-    return row[0] if row else None
-
-
-# =============================================================================
-# TODO: Remake the docs table to have the id for the user message 
-#       as a foreign key rather than a role id (not used).
+# DB Initialization ===========================================================
 def init_db():
     cur = conn.cursor()
     try:
@@ -307,41 +52,270 @@ def init_db():
 
     user_role = insert_role("user")
     assist_role = insert_role("assistant")
-    # print(f"user: {user_role}\nAssistant: {assist_role}")
-    # hist_id = insert_chat_history()
-    # update_chat_history(hist_id, "Main chat")
 
 
-# Call init_db when the module is imported
-init_db()
+# check to see if DB file exists or not
+if not os.path.exists(DB_PATH):
+    init_db()  # Run the initialization function if the file does not exist
 
 
+# Chat History Functions ======================================================
+def insert_chat_history() -> int:
+    """Insert a new chat history record and return its ID."""
+    cur = conn.cursor()
+    try:
+        cur.execute("INSERT INTO chat_history (title) VALUES (NULL);")
+        conn.commit()
+        resp = cur.lastrowid
+    finally:
+        cur.close()
+    return resp
 
-if __name__ == "__main__":
-    # Only runs if dbmain.py is ran directly
-    # Test insert
-    role_name = "User"
-    role_id = insert_role(role_name)
-    chat_history_id = insert_chat_history()
-    chat_id = insert_or_update_chat("Hello", 1, chat_history_id, role_id)
 
-    # Print table structure
-    cur.execute("SELECT name FROM sqlite_master WHERE type='table';")
-    tables = cur.fetchall()
+def get_chat_histories() -> list[dict[str, str | int | None]]:
+    """Return a list of all chat histories with id and title."""
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT id, title FROM chat_history;")
+        rows = cur.fetchall()
+    finally:
+        cur.close()
 
-    print("Tables in the database:")
-    for table in tables:
-        table_name = table[0]
-        print(f"\n Table: {table_name}")
-        cur.execute(f"PRAGMA table_info({table_name});")
-        columns = cur.fetchall()
-        if columns:
-            print(" Columns:")
-            for column in columns:
-                print(f"    - {column[1]} ({column[2]})")
-        else:
-            print(" No columns found.")
+    return [{"id": row[0], "title": row[1]} for row in rows]
 
-# lines needed for test data
-# cur.close()
-# conn.close()
+
+def get_chat_history(hist_id: int) -> dict[str, str | int] | None:
+    """Return a single chat history by its ID."""
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT id, title FROM chat_history WHERE id = ?;", (hist_id,))
+        row = cur.fetchone()
+    finally:
+        cur.close()
+
+    return {"id": row[0], "title": row[1]} if row else None
+
+
+def update_chat_history(hist_id: int, new_title: str) -> None:
+    """Update the title of a chat history."""
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            "UPDATE chat_history SET title = ? WHERE id = ?;",
+            (new_title, hist_id),
+        )
+        conn.commit()
+    finally:
+        cur.close()
+
+
+def delete_chat_history(hist_id: int) -> None:
+    """Delete a chat history and its related chats and docs."""
+    cur = conn.cursor()
+    try:
+        cur.execute("DELETE FROM chat_history WHERE id = ?;", (hist_id,))
+        conn.commit()
+    finally:
+        cur.close()
+
+
+# Chat Message Functions ======================================================
+def insert_chat(message: str, order_number: int, hist_id: int, role: int) -> int:
+    """Insert a new chat message and return its ID."""
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            """
+            INSERT INTO chat (message, order_number, chat_history_id, role)
+            VALUES (?, ?, ?, ?);
+            """,
+            (message, order_number, hist_id, role),
+        )
+        conn.commit()
+        resp = cur.lastrowid
+    finally:
+        cur.close()
+    return resp
+
+
+def get_chats_by_history(hist_id: int) -> list[dict[str, str | int]]:
+    """Return all chat messages for a given chat history ID."""
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            "SELECT id, message, order_number, chat_history_id, role "
+            "FROM chat WHERE chat_history_id = ?;",
+            (hist_id,),
+        )
+        rows = cur.fetchall()
+    finally:
+        cur.close()
+
+    return [
+        {
+            "id": row[0],
+            "message": row[1],
+            "order_number": row[2],
+            "chat_history_id": row[3],
+            "role": row[4],
+        }
+        for row in rows
+    ]
+
+
+def update_chat(chat_id: int, new_message: str) -> int:
+    """Update a chat message and return its ID."""
+    cur = conn.cursor()
+    try:
+        cur.execute("UPDATE chat SET message = ? WHERE id = ?;", (new_message, chat_id))
+        conn.commit()
+    finally:
+        cur.close()
+    return chat_id
+
+
+def delete_chat(chat_id: int) -> int:
+    """Delete a chat message by its ID."""
+    cur = conn.cursor()
+    try:
+        cur.execute("DELETE FROM chat WHERE id = ?;", (chat_id,))
+        conn.commit()
+    finally:
+        cur.close()
+    return chat_id
+
+
+def delete_chats_by_history(hist_id: int) -> int:
+    """Delete all chat messages associated with a chat history."""
+    cur = conn.cursor()
+    try:
+        cur.execute("DELETE FROM chat WHERE chat_history_id = ?;", (hist_id,))
+        conn.commit()
+    finally:
+        cur.close()
+    return hist_id
+
+
+# Role Functions ==============================================================
+def insert_role(role_name: str) -> int | None:
+    """Insert a role if it does not exist and return its ID."""
+    cur = conn.cursor()
+    try:
+        cur.execute("INSERT OR IGNORE INTO role (role_name) VALUES (?);", (role_name,))
+        conn.commit()
+        cur.execute("SELECT id FROM role WHERE role_name = ?;", (role_name,))
+        result = cur.fetchone()
+    finally:
+        cur.close()
+
+    return result[0] if result else None
+
+
+def get_roles() -> list[dict[str, str | int]]:
+    """Return all available roles with their ID and name."""
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT id, role_name FROM role;")
+        rows = cur.fetchall()
+    finally:
+        cur.close()
+
+    return [{"id": row[0], "role_name": row[1]} for row in rows]
+
+
+def update_role(role_id: int, new_name: str) -> int:
+    """Update a role name and return the role ID."""
+    cur = conn.cursor()
+    try:
+        cur.execute("UPDATE role SET role_name = ? WHERE id = ?;", (new_name, role_id))
+        conn.commit()
+    finally:
+        cur.close()
+    return role_id
+
+
+def delete_role(role_id: int) -> int:
+    """Delete a role by its ID."""
+    cur = conn.cursor()
+    try:
+        cur.execute("DELETE FROM role WHERE id = ?;", (role_id,))
+        conn.commit()
+    finally:
+        cur.close()
+    return role_id
+
+
+# Document Functions ==========================================================
+def insert_doc(data_url: str, message: str, hist_id: int, chat_id: int) -> int:
+    """Insert a new document and return its ID."""
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            """
+            INSERT INTO docs (data_url, message, chat_history_id, chat_id)
+            VALUES (?, ?, ?, ?);
+            """,
+            (data_url, message, hist_id, chat_id),
+        )
+        conn.commit()
+        resp = cur.lastrowid
+    finally:
+        cur.close()
+    return resp
+
+
+def get_docs_by_history(hist_id: int) -> list[str]:
+    """Return all document messages associated with a chat history."""
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT message FROM docs WHERE chat_history_id = ?;", (hist_id,))
+        rows = cur.fetchall()
+    finally:
+        cur.close()
+
+    return [row[0] for row in rows]
+
+
+def get_docs_by_chat_id(chat_id: int) -> list[str]:
+    """Return all document data_urls associated with a chat ID."""
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT data_url FROM docs WHERE chat_id = ?;", (chat_id,))
+        rows = cur.fetchall()
+    finally:
+        cur.close()
+
+    return [row[0] for row in rows]
+
+
+def update_doc(doc_id: int, new_message: str) -> int:
+    """Update a document message and return its ID."""
+    cur = conn.cursor()
+    try:
+        cur.execute("UPDATE docs SET message = ? WHERE id = ?;", (new_message, doc_id))
+        conn.commit()
+    finally:
+        cur.close()
+    return doc_id
+
+
+def delete_docs_by_history(hist_id: int) -> None:
+    """Delete all documents associated with a chat history."""
+    cur = conn.cursor()
+    try:
+        cur.execute("DELETE FROM docs WHERE chat_history_id = ?;", (hist_id,))
+        conn.commit()
+    finally:
+        cur.close()
+
+
+# Cohere API Key Functions ====================================================
+def update_cohere_key(new_key: str) -> None:
+    """Update the stored Cohere API key (only one can exist)."""
+    cur = conn.cursor()
+    try:
+        cur.execute("DELETE FROM cohere_key;")
+        cur.execute("INSERT INTO cohere_key (api_key) VALUES (?);", (new_key,))
+        conn.commit()
+    finally:
+        cur.close()
