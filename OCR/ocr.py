@@ -29,7 +29,6 @@ class ImageInfo:
         )
 
 
-# function to handle the byte data passed from the front end.
 def handle_image(file: ImageInfo) -> str:
 
     images: list[Image] = []
