@@ -1,3 +1,4 @@
+// Globals ====================================================================
 let file_list = [];
 let current_hist = -1; // -1 by default, backend will create new history if -1.
 
@@ -8,18 +9,14 @@ document.addEventListener('DOMContentLoaded', function () {
         webui.setEventCallback((e) => {
             if (e == webui.event.CONNECTED) {
                 // Connection to the backend is established
-                console.log('Connected.');
+                console.log('WebUI Connected.');
                 current_hist = -1;
                 initSidebar();
                 getAPIKey();
 
-
             } else if (e == webui.event.DISCONNECTED) {
                 // Connection to the backend is lost
-                console.log('Disconnected.');
-
-
-
+                console.log('WebUI Disconnected.');
             }
         });
     } else {
@@ -35,15 +32,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 });
 
-// TODO: probably need to convert this to a onclick="" call in the html and make a async function to
-//       send all the images to the backend for the OCR stuff to take over.
-// TODO: look into encoding the images and pdf's into base64 to send to the backend as a string
-// https://webui.me/docs/2.5/#/?id=javascript-decode
-// could be encode or decode, not sure yet...
-// const str = webui.decode(base64); // this is the line we need, base64 being the image encoded to base64 already
-// Then call this in the python backend:
-// decoded_string = webui.ui_decode("SGVsbG8=")
-// print(f"Decoded String: {decoded_string}")  # Output: Hello
+
 
 // Trigger file input when docBtn is clicked
 document.getElementById('docBtn').addEventListener('click', function () {
@@ -68,11 +57,9 @@ document.getElementById('fileInput').addEventListener('change', function (e) {
                 if (file.type.startsWith('image/')) {
                     const img = new Image();
                     img.onload = function () {
-                        console.log("Image loaded successfully");
                         const width = img.naturalWidth;
                         const height = img.naturalHeight;
                         const augmentedData = `${dataURL},${width},${height}`;
-                        console.log(augmentedData)
                         file_list.push(augmentedData);
                     };
                     img.src = dataURL;
@@ -113,16 +100,14 @@ document.getElementById('fileInput').addEventListener('change', function (e) {
 
 
 
+// Main input handle from user ================================================
 async function handleQuery() {
     let input_field = document.getElementById('chatInput');
     let query = input_field.value;
 
-    // files if any
     // Get the file input element and its files
     const fileInput = document.getElementById('fileInput');
     const files = fileInput.files; // This is a FileList object
-    console.log("files: ", files)
-    console.log("files_list: ", file_list);
 
     addUserMessage(query, files);
 
@@ -147,9 +132,6 @@ async function handleQuery() {
         placeholder.remove();
         const parts = resp.split("|");
         if (current_hist === -1) {
-            // TODO: call ui updates here
-            // title change
-            // add a button to sidebar
             webui.getTitle(parseInt(parts[0], 10)).then(resp => {
                 // title change
                 document.getElementById('chatTitle').innerText = resp;
@@ -159,11 +141,9 @@ async function handleQuery() {
 
         }
         current_hist = parseInt(parts[0], 10);
-        console.log("history_id: ", current_hist);
 
         // Get the remainder as a string.
         const bot_resp = parts.slice(1).join("|");
-        console.log("bot_resp: ", bot_resp);
 
         addBotMessage(bot_resp);
         submit_btn.disabled = false;
@@ -177,7 +157,8 @@ async function handleQuery() {
     });
 }
 
-// Function to add a user message (left aligned)
+
+// Function to add a user message (left aligned bubbles)
 function addUserMessage(message, files) {
     const chatBox = document.getElementById('chatBox');
     const messageDiv = document.createElement('div');
@@ -228,7 +209,8 @@ function addUserMessage(message, files) {
     chatBox.scrollTop = chatBox.scrollHeight;
 }
 
-// Function to add a bot message (right aligned)
+
+// Function to add a bot message (right aligned bubbles)
 function addBotMessage(message) {
     const chatBox = document.getElementById('chatBox');
     const messageDiv = document.createElement('div');
@@ -249,21 +231,8 @@ function addBotMessage(message) {
     });
 }
 
-function createBubble(isUser) {
-    const chatBox = document.getElementById('chatBox');
-    const placeholderDiv = document.createElement('div');
-    placeholderDiv.classList.add('d-flex', 'justify-content-end', 'message');
 
-    const bubble = document.createElement('div');
-    if (isUser === true) {
-        bubble.classList.add('bg-light', 'p-4', 'border', 'rounded', 'w-75');
-    } else {
-        bubble.classList.add('bg-primary', 'text-white', 'p-4', 'border', 'rounded', 'w-75');
-    }
-
-}
-
-
+// Temp bubble msg on bot side to let the user know that a msg is coming.
 function addBotPlaceholderMessage() {
     const chatBox = document.getElementById('chatBox');
     const placeholderDiv = document.createElement('div');
@@ -298,67 +267,80 @@ function addBotPlaceholderMessage() {
 }
 
 
-
-// Sidebar functions ----------------------------------------------------------
-// Function to initialize (or reset) the sidebar container.
+// Sidebar functions ==========================================================
+/**
+ * Initializes the sidebar by clearing existing buttons
+ * and adding new ones based on retrieved chat data.
+ *
+ * @returns {Promise<void>}
+ */
 async function initSidebar() {
     const sidebar = document.getElementById("sidebarContainer");
-    if (sidebar) {
-        // Clear out any existing buttons
-        sidebar.innerHTML = "";
-        webui.getChats().then(resp => {
-            let obj = JSON.parse(resp);
 
-            for (const key in obj) {
-                if (obj.hasOwnProperty(key)) {
-                    const title = obj[key].title;
-                    addSidebarButton(key, title);
-                }
-            }
-        });
-
-    } else {
+    if (!sidebar) {
         console.warn("Sidebar container element with id 'sidebarContainer' not found.");
+        return;
+    }
+
+    sidebar.innerHTML = "";
+
+    try {
+        const resp = await webui.getChats();
+        const chats = JSON.parse(resp);
+        
+        Object.entries(chats).forEach(([key, chat]) => {
+            addSidebarButton(key, chat.title);
+        });
+    } catch (error) {
+        console.error("Failed to initialize sidebar:", error);
     }
 }
 
-// Function to add a single button to the sidebar.
-// The parameter 'text' represents the button's label.
-function addSidebarButton(hist_id, text) {
+
+/**
+ * Adds a sidebar button with a delete option.
+ *
+ * @param {number} hist_id - The unique ID associated with the chat history.
+ * @param {string} title - The title text to display on the button.
+ * @returns {void}
+ */
+function addSidebarButton(hist_id, title) {
     const sidebar = document.getElementById("sidebarContainer");
     if (!sidebar) {
         console.error("Sidebar container element with id 'sidebarContainer' not found.");
         return;
     }
 
-    // Create a container div that stretches its children.
     const buttonContainer = document.createElement("div");
-    buttonContainer.className = "d-flex align-items-stretch my-2"; // Use align-items-stretch for uniform height
+    buttonContainer.className = "d-flex align-items-stretch my-2";
 
-    // Create the main sidebar button that grows to take available space.
+    // Main button ====================
     const mainButton = document.createElement("button");
-    mainButton.id = `hist_id-${hist_id}`;
-    mainButton.type = "button";
-    mainButton.className = "btn btn-secondary flex-grow-1 rounded-0"; // Flex-grow to take all available space
+    Object.assign(mainButton, {
+        id: `hist_id-${hist_id}`,
+        type: "button",
+        className: "btn btn-secondary flex-grow-1 rounded-0",
+        textContent: title,
+    });
+    // Bootstrap attributes
     mainButton.setAttribute('data-bs-dismiss', "offcanvas");
-    mainButton.textContent = text;
-    mainButton.addEventListener("click", function () {
-        console.log("Sidebar button clicked:", text);
-        document.getElementById('chatTitle').innerText = text;
+    // onclick event
+    mainButton.addEventListener("click", () => {
+        document.getElementById('chatTitle').innerText = title;
         updateChatWindow(hist_id);
         current_hist = hist_id;
     });
-    buttonContainer.appendChild(mainButton);
 
-    // Create the delete button that stays on the far right.
+    // Delete Button ==================
     const deleteButton = document.createElement("button");
-    deleteButton.type = "button";
-    deleteButton.className = "btn btn-outline-danger rounded-0";
-    deleteButton.textContent = "X";
-    // Apply a left margin to push it to the right.
+    Object.assign(deleteButton, {
+        type: "button",
+        className: "btn btn-outline-danger rounded-0",
+        textContent: "X",
+    });
     deleteButton.style.marginLeft = "auto";
-    deleteButton.addEventListener("click", function () {
-        // When the delete button is clicked, update the chat if this entry is currently active.
+    // onclick event
+    deleteButton.addEventListener("click", () => {
         if (current_hist === hist_id) {
             current_hist = -1;
             updateChatWindow(current_hist);
@@ -366,111 +348,120 @@ function addSidebarButton(hist_id, text) {
         webui.removeHistory(hist_id);
         buttonContainer.remove();
     });
-    buttonContainer.appendChild(deleteButton);
 
-    // Append the entire container to the sidebar.
+    buttonContainer.append(mainButton, deleteButton);
     sidebar.appendChild(buttonContainer);
 }
 
 
-
-
-
-
+// ============================================================================
+// Dealing with preview docs after chat reload
 /**
- * Converts a data URL to a File object.
- * @param {string} dataURL - The data URL string.
- * @param {string} filename - The name for the new File.
- * @returns {File} - The reconstructed File object.
+ * Converts a dataURL (base64-encoded) into a File object.
+ * Generates the filename using the first 8 characters of the base64 data + proper file extension.
+ *
+ * @param {string} dataURL - The dataURL to convert.
+ * @returns {File} A File object constructed from the given dataURL.
  */
-function dataURLtoFile(dataURL) {
-    // Split the data URL at the comma
-    const arr = dataURL.split(',');
-
-    // Extract the MIME type using a regular expression
-    const mimeMatch = arr[0].match(/:(.*?);/);
-    if (!mimeMatch) {
-        throw new Error('Invalid data URL.');
-    }
-    const mime = mimeMatch[1];
-
-    // Decode base64 encoded string
-    const bstr = atob(arr[1]);
-
-    // Create an array of bytes
-    let n = bstr.length;
+function dataURLToFile(dataURL) {
+    const [meta, base64] = dataURL.split(',');
+    const mimeMatch = meta.match(/:(.*?);/);
+    const mime = mimeMatch ? mimeMatch[1] : 'application/octet-stream';
+    
+    // Decode base64
+    const bstr = atob(base64);
+    const n = bstr.length;
     const u8arr = new Uint8Array(n);
-
-    while (n--) {
-        u8arr[n] = bstr.charCodeAt(n);
+    for (let i = 0; i < n; i++) {
+        u8arr[i] = bstr.charCodeAt(i);
     }
 
-    // Construct a File object with the name, data, and MIME type
-    return new File([u8arr], "file", { type: mime });
+    // Extract extension from mime type
+    const extension = mime.split('/')[1] || 'bin';
+    
+    // Create a simple fingerprint from the first 8 characters of base64
+    const fingerprint = base64.slice(0, 8);
+    const filename = `${fingerprint}.${extension}`;
+
+    return new File([u8arr], filename, { type: mime });
 }
 
 
-// Update Chat window with new chat ===========================================
+/**
+ * Updates the chat window with messages from the specified history ID.
+ *
+ * @param {string|number} hist_id - The ID of the chat history to load.
+ * @returns {Promise<void>}
+ */
 async function updateChatWindow(hist_id) {
     if (hist_id === -1) {
         document.getElementById('chatBox').innerHTML = '';
         document.getElementById('chatTitle').innerText = 'Document Assistant';
         current_hist = -1;
-    } else {
-        webui.getMessages(hist_id).then(mesgResp => {
-            document.getElementById('chatBox').innerHTML = '';
-            let chats = JSON.parse(mesgResp);
-            message_order = [];
-            let doc_list = [];
+        return;
+    }
 
-            // field_names=['message', "order_number", "history_id", "role_id"]
-            for (const key in chats) {
-                if (chats.hasOwnProperty(key)) {
-                    const chat_message = chats[key].message;
-                    const order_number = chats[key].order_number;
-                    const history_id = chats[key].history_id;
-                    const role_id = chats[key].role_id;
-                    message_order.push({ key, chat_message, order_number, history_id, role_id });
+    try {
+        const mesgResp = await webui.getMessages(hist_id);
+        const chatBox = document.getElementById('chatBox');
+        chatBox.innerHTML = '';
 
-                    // //TODO: idk what todo with this yet
-                    if (role_id === 1) {
-                        // field_names=["history_id", "message", "role_id"]
-                        // TODO: currently commented out because it causes a crash on the DB fetch function in db.py
-                        // webui.getDocs(key).then(docResp => {
-                        //     url_list = docResp.split('|');
+        const chats = JSON.parse(mesgResp);
+        const messageOrder = [];
 
-                        //     Array.from(url_list).forEach(url => {
-                        //         doc_list.push(dataURLtoFile(url));
-                        //     });
-                        // });
+        const fetchDocsTasks = [];
+
+        for (const key in chats) {
+            if (!chats.hasOwnProperty(key)) continue;
+
+            const { message: chatMessage, order_number: orderNumber, history_id: historyId, role_id: roleId } = chats[key];
+
+            const messageItem = { 
+                key: Number(key), 
+                chatMessage, 
+                orderNumber, 
+                historyId, 
+                roleId, 
+                docList: []  // 👈 Each message has its own document list
+            };
+
+            if (roleId === 1) {
+                // Fetch docs for this specific message
+                const fetchTask = webui.getDocs(key).then(docResp => {
+                    if (docResp !== "") {
+                        const urls = docResp.split('|');
+                        messageItem.docList = urls.map(url => dataURLToFile(url));
                     }
-                }
+                });
+                fetchDocsTasks.push(fetchTask);
             }
 
-            // ensures chat message order
-            message_order.sort((a, b) => a.key - b.key);
-            console.log(message_order);
+            messageOrder.push(messageItem);
+        }
 
-            message_order.forEach(item => {
-                switch (item.role_id) {
-                    case 1:
-                        console.log("doc_list: ", doc_list)
-                        addUserMessage(item.chat_message, doc_list); // TODO: add 'doc_list' here when safe
-                        break;
-                    case 2:
-                        addBotMessage(item.chat_message);
-                        break;
-                    default:
-                        break;
-                }
-            });
-        });
+        // Wait for all document fetching tasks to complete
+        await Promise.all(fetchDocsTasks);
 
+        // Sort messages by key (ensures correct order)
+        messageOrder.sort((a, b) => a.key - b.key);
 
+        for (const item of messageOrder) {
+            switch (item.roleId) {
+                case 1:
+                    addUserMessage(item.chatMessage, item.docList); // 👈 now passing per-message docs
+                    break;
+                case 2:
+                    addBotMessage(item.chatMessage);
+                    break;
+                default:
+                    console.warn(`Unknown role_id: ${item.roleId}`);
+                    break;
+            }
+        }
+    } catch (error) {
+        console.error("Error loading messages:", error);
     }
 }
-
-
 
 
 

@@ -78,8 +78,10 @@ def save_uploaded_docs(hist_id: int, chat_id: int, file_list: list[str]):
     """
     for file in file_list:
         parts = file.split(",")
-        data_url, base64_data = parts[0], parts[1]
+        data_url: str = parts[0] + "," + parts[1]
+        base64_data = parts[1]
         file_type = data_url.split(";")[0].split(":")[1]
+        
 
         width = int(parts[2]) if len(parts) > 2 else 612
         height = int(parts[3]) if len(parts) > 3 else 792
@@ -100,6 +102,9 @@ def handle_chat_event(e: ui.Event):
     hist_id = e.get_int_at(0)
     user_msg = e.get_string_at(1)
     user_files = e.get_string_at(2)
+
+    if user_msg == "":
+        user_msg = " "
 
     file_list = user_files.split("|") if user_files else []
 
@@ -155,12 +160,19 @@ def get_messages_for_history(e: ui.Event):
 def get_documents_for_chat(e: ui.Event):
     chat_id = e.get_int_at(0)
     doc_urls = db.get_docs_by_chat_id(chat_id)
-    e.return_string("|".join(doc_urls))
+    
+    if len(doc_urls) > 1:
+        resp = "|".join(doc_urls)
+    elif len(doc_urls) == 1:
+        resp = doc_urls[0]
+    else:
+        resp = ""
+    
+    e.return_string(resp)
 
 
 def update_api_key(e: ui.Event):
     api_key = e.get_string_at(0)
-    print(api_key)
     db.update_cohere_key(api_key)
 
 
@@ -170,7 +182,6 @@ def get_api_key(e: ui.Event):
         e.return_string("")
     else:
         e.return_string(resp)
-    print(resp)
 
 
 # =============================================================================
