@@ -181,3 +181,6 @@ cython_debug/
 # Builds
 dist/*
 build/*
+
+# database file for the application, one gets made if there isnt one on program start
+database/chatbot.db

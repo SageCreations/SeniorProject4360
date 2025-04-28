@@ -10,8 +10,8 @@ import pytesseract
 import pdf2image
 from PIL import Image
 
-current_os = platform.system()
-print(current_os)
+# current_os = platform.system()
+# print(current_os)
 
 
 # class to store the data passed from the front end.
