@@ -10,7 +10,7 @@ import pytesseract
 import pdf2image
 from PIL import Image
 
-# current_os = platform.system()
+current_os = platform.system()
 # print(current_os)
 
 
