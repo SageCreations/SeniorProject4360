@@ -39,7 +39,7 @@ def handle_image(file: ImageInfo) -> str:
         path_to_poppler_exe = 'OCR\\windows\\poppler-24.08.0\\Library\\bin'
     elif current_os == "Linux":
         pytesseract.pytesseract.tesseract_cmd = 'OCR/linux/tesseract/bin/tesseract'
-        path_to_poppler_exe = 'OCR/linux/poppler/bin'
+        path_to_poppler_exe = '/usr/bin'
     elif current_os == "Darwin":  # macOS returns 'Darwin'
         pytesseract.pytesseract.tesseract_cmd = 'OCR/darwin/tesseract/bin/tesseract'
         path_to_poppler_exe = 'OCR/darwin/poppler/bin'
