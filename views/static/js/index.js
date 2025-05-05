@@ -33,11 +33,48 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 
+window.addEventListener('DOMContentLoaded', () => {
+    const main = document.getElementById('main');
+    const fileInput = document.getElementById('fileInput');
+    const docBtn   = document.getElementById('docBtn');
+  
+    // Ensures docBtn still opens the file picker
+    docBtn.addEventListener('click', () => fileInput.click());
+  
+    // highlight when dragging files over #main
+    main.addEventListener('dragover', e => {
+        e.preventDefault();
+        main.classList.add('drag-over');
+    });
+    main.addEventListener('dragleave', e => {
+        e.preventDefault();
+        main.classList.remove('drag-over');
+    });
+  
+    // drop handler
+    main.addEventListener('drop', e => {
+        e.preventDefault();
+        main.classList.remove('drag-over');
+        const files = Array.from(e.dataTransfer.files);
 
-// Trigger file input when docBtn is clicked
-document.getElementById('docBtn').addEventListener('click', function () {
-    document.getElementById('fileInput').click();
+        // only keep types your fileInput already accepts
+        const accepted = fileInput.accept
+        .split(',')
+        .map(s => s.trim()); // "image/png","image/jpeg","application/pdf"
+
+        const picked = files.filter(f => accepted.includes(f.type));
+        if (!picked.length) return;
+
+        // simulate the user selecting them in the hidden input
+        const dt = new DataTransfer();
+        picked.forEach(f => dt.items.add(f));
+        fileInput.files = dt.files;
+
+        // fire the normal onchange logic
+        fileInput.dispatchEvent(new Event('change'));
+    });
 });
+  
 
 // Handle file selection and update the UI
 document.getElementById('fileInput').addEventListener('change', function (e) {

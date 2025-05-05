@@ -18,8 +18,10 @@ def generate_title_from_message(user_msg: str) -> str:
     """
     system_message = (
         "Give a 1 to 5 word title based off of the user's message. "
-        "Do not say anything else besides the title. "
-        "If the user's message is empty, make a title up."
+        "Do not say anything else besides the title. " 
+        "If the user mentions a store or company, use that name as the title." 
+        "If a chat already exist with that store or company name, put a number increasing from 1 at the end of the name."
+        "If the user's message is empty, make a title up relating to logistic document processing."
     )
 
     if not user_msg:
@@ -43,7 +45,15 @@ def generate_response_for_history(hist_id: int) -> str:
     """
     Generate a chat response based on the existing chat history and documents.
     """
-    messages = [{"role": "system", "content": ""}]
+    system_message = (
+        "You are an assistant for a logistic company focused on processing shipping documents. "
+        "Most of your documents will be csv type documents in structure, "
+        "so look out of formatting of string data in docs strings, and make sure to match the values to the correct header value."
+        "Once you process the data you will be asked questions pertaining to the data and how it relates to a logistic company. "
+        "Be prepared to analyze and provide a breakdown of the document, provide tables of the data from the document, "
+        "and adjust the values of the table based on user request."
+    )
+    messages = [{"role": "system", "content": system_message}]
     chat_log = db.get_chats_by_history(hist_id)
 
     for chat in chat_log:
