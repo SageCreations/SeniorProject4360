@@ -7,9 +7,6 @@ import cohere
 import database.db as db
 import OCR.ocr as ocr
 
-# API KEY for testing
-# baEFHZHrRfmJQFaKNwCRIUpQODvAi5OW272d2God
-
 
 # Chat Functions ==============================================================
 def generate_title_from_message(user_msg: str) -> str:
@@ -200,9 +197,12 @@ def get_api_key(e: ui.Event):
 def main():
     my_window = ui.Window()
 
-    # NOTE: Switch these paths when building executable
-    my_window.set_root_folder("views")
-    # my_window.set_root_folder("_internal/views")
+    if getattr(sys, 'frozen', False):
+        BASE_PATH = os.path.join(sys._MEIPASS)
+    else:
+        BASE_PATH = os.path.abspath(".")
+
+    my_window.set_root_folder(f"{BASE_PATH}/views")
 
     # Bind UI events
     my_window.bind("handleChat",    handle_chat_event)
