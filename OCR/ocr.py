@@ -34,9 +34,14 @@ def handle_image(file: ImageInfo) -> str:
     images: list[Image] = []
     document_data: list[str] = []
 
+    if getattr(sys, 'frozen', False):
+        BASE_PATH = os.path.join(sys._MEIPASS)
+    else:
+        BASE_PATH = os.path.abspath(".")
+
     if current_os == "Windows":
-        pytesseract.pytesseract.tesseract_cmd = 'OCR\\windows\\Tesseract-OCR\\tesseract.exe'
-        path_to_poppler_exe = 'OCR\\windows\\poppler-24.08.0\\Library\\bin'
+        pytesseract.pytesseract.tesseract_cmd = os.path.join(BASE_PATH, 'OCR\\windows\\Tesseract-OCR\\tesseract.exe')
+        path_to_poppler_exe = os.path.join(BASE_PATH, 'OCR\\windows\\poppler-24.08.0\\Library\\bin')
     elif current_os == "Linux":
         pytesseract.pytesseract.tesseract_cmd = '/usr/bin/tesseract'
         path_to_poppler_exe = '/usr/bin'
