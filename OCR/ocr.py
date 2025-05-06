@@ -3,6 +3,8 @@
 # Import libraries
 import platform
 import io
+import sys
+import os
 from tempfile import TemporaryDirectory
 from pathlib import Path
 
